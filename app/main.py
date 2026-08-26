@@ -139,7 +139,7 @@ async def update_candidate_profile(profile: Dict[str, Any] = Body(...)):
 
 @app.post("/api/apply/start")
 async def start_apply(payload: StartApplyPayload):
-    session_id = await start_auto_apply_task(
+    session_id = start_auto_apply_task(
         job_id=payload.job_id,
         job_title=payload.job_title,
         company_name=payload.company_name,
