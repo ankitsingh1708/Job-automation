@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Jobs Explorer & AI Resume Matcher</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef6fc',
+              100: '#e0eff9',
+              500: '#0a66c2',
+              600: '#0855a4',
+              700: '#004182',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="/static/styles.css?v=3" />
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col min-h-screen transition-colors duration-200">
+
+  <!-- Sticky Navbar -->
+  <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 glass-header">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="window.location.reload()">
+          <div class="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 font-black text-xl">
+            in
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-lg tracking-tight">Jobs<span class="text-brand-500">Radar</span></span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-500/20">AI Matcher</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">LinkedIn Openings & Smart Resume Matching</p>
+          </div>
+        </div>
+
+        <!-- Right Quick Actions -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          
+          <!-- Resume Matcher Button -->
+          <button id="openResumeBtn" class="inline-flex items-center px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 shadow-md shadow-indigo-500/20 transition">
+            <i data-lucide="file-text" class="w-4 h-4 mr-1.5"></i>
+            <span id="resumeBtnText">Upload Resume</span>
+          </button>
+
+          <!-- Market Insights Button -->
+          <button id="openStatsBtn" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 mr-1.5 text-brand-500"></i>
+            <span class="hidden md:inline">Insights</span>
+          </button>
+
+          <!-- Bookmarks Button -->
+          <button id="openBookmarksBtn" class="relative inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+            <i data-lucide="bookmark" class="w-4 h-4 mr-1.5 text-amber-500"></i>
+            Saved (<span id="bookmarkCount">0</span>)
+          </button>
+
+          <!-- Dark/Light Mode Toggle -->
+          <button id="themeToggle" class="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Toggle Dark Mode">
+            <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+            <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero & Primary Search Header -->
+  <section class="bg-gradient-to-b from-brand-50/60 to-transparent dark:from-slate-900/50 dark:to-transparent border-b border-slate-200/60 dark:border-slate-800/60 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      
+      <!-- Resume Active Profile Banner (if resume loaded) -->
+      <div id="activeResumeBanner" class="hidden mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-brand-50 dark:from-indigo-950/40 dark:to-brand-950/40 border border-indigo-200 dark:border-indigo-800/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shrink-0 shadow-md">
+            <i data-lucide="user-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white" id="resumeBannerTitle">Resume Profile Active</h3>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">AI Scoring Enabled</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5" id="resumeBannerSkills">Extracted skills: Python, React, AWS</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+          <button id="resumeAutoSearchBtn" class="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Auto-Search Matching Jobs</span>
+          </button>
+          <button id="clearResumeBtn" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition" title="Clear Resume">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="max-w-3xl mb-6">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+          Find & Match Jobs on <span class="text-brand-500">LinkedIn</span> with AI
+        </h1>
+        <p class="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400">
+          Search live openings or upload your resume to automatically rank jobs by match percentage and generate tailored applications.
+        </p>
+      </div>
+
+      <!-- Main Search Bar -->
+      <form id="searchForm" autocomplete="off" class="bg-white dark:bg-slate-900 p-2.5 sm:p-3 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-2.5">
+        <!-- Keyword Input -->
+        <div class="flex-1 flex items-center px-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 mr-2 shrink-0"></i>
+          <input 
+            type="text" 
+            id="keywordInput" 
+            value="Software Engineer"
+            placeholder="Job title, skill, or company (e.g. Python, AI Engineer, Google)" 
+            class="w-full py-2.5 bg-transparent text-sm sm:text-base outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white font-medium"
+          />
+        </div>
+
+        <!-- Location Input -->
+        <div class="flex-1 flex items-center px-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition">
+          <i data-lucide="map-pin" class="w-5 h-5 text-slate-400 mr-2 shrink-0"></i>
+          <input 
+            type="text" 
+            id="locationInput" 
+            value="India"
+            placeholder="City, state, or 'Remote' (e.g. Bengaluru, Hyderabad)" 
+            class="w-full py-2.5 bg-transparent text-sm sm:text-base outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white font-medium"
+          />
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="searchSubmitBtn" class="w-full md:w-auto px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center space-x-2 transition shrink-0">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span>Search Jobs</span>
+        </button>
+      </form>
+
+      <!-- Quick Category / Skill Tags -->
+      <div class="mt-4 flex items-center flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
+        <span class="font-semibold flex items-center"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 mr-1"></i> Trending:</span>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Python</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">AI & ML</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Software Engineer</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">React Developer</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">DevOps / AWS</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Data Scientist</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Filters Sidebar (lg:col-span-3) -->
+      <aside class="lg:col-span-3">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sticky top-24 shadow-sm">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center space-x-2 font-bold text-slate-900 dark:text-white">
+              <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i>
+              <span>Filters</span>
+            </div>
+            <button id="resetFiltersBtn" class="text-xs text-brand-500 hover:text-brand-700 font-medium">Reset</button>
+          </div>
+
+          <div class="space-y-6 pt-4 text-sm">
+            <!-- Workplace Type -->
+            <div>
+              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Workplace Type</label>
+              <div class="space-y-2">
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterRemote" value="" checked class="text-brand-500 focus:ring-brand-500">
+                  <span>Any</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterRemote" value="remote" class="text-brand-500 focus:ring-brand-500">
+                  <span class="flex items-center"><i data-lucide="globe" class="w-3.5 h-3.5 mr-1.5 text-emerald-500"></i> Remote</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterRemote" value="hybrid" class="text-brand-500 focus:ring-brand-500">
+                  <span class="flex items-center"><i data-lucide="building" class="w-3.5 h-3.5 mr-1.5 text-indigo-500"></i> Hybrid</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterRemote" value="on-site" class="text-brand-500 focus:ring-brand-500">
+                  <span class="flex items-center"><i data-lucide="map-pin" class="w-3.5 h-3.5 mr-1.5 text-slate-400"></i> On-site</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Date Posted -->
+            <div>
+              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Date Posted</label>
+              <div class="space-y-2">
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterDate" value="" checked class="text-brand-500 focus:ring-brand-500">
+                  <span>Any time</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterDate" value="24h" class="text-brand-500 focus:ring-brand-500">
+                  <span>Past 24 hours</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterDate" value="week" class="text-brand-500 focus:ring-brand-500">
+                  <span>Past week</span>
+                </label>
+                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
+                  <input type="radio" name="filterDate" value="month" class="text-brand-500 focus:ring-brand-500">
+                  <span>Past month</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Experience Level -->
+            <div>
+              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Experience Level</label>
+              <select id="filterExp" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-brand-500">
+                <option value="">All Experience Levels</option>
+                <option value="internship">Internship</option>
+                <option value="entry">Entry Level</option>
+                <option value="associate">Associate</option>
+                <option value="mid-senior">Mid-Senior Level</option>
+                <option value="director">Director</option>
+                <option value="executive">Executive</option>
+              </select>
+            </div>
+
+            <!-- Job Type -->
+            <div>
+              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Job Type</label>
+              <select id="filterJobType" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-brand-500">
+                <option value="">All Employment Types</option>
+                <option value="full-time">Full-time</option>
+                <option value="part-time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="internship">Internship</option>
+              </select>
+            </div>
+
+            <!-- Company Type Filter / Ignore Service Companies -->
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Company Filter</label>
+              <label class="flex items-start space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 hover:border-brand-500 transition">
+                <input type="checkbox" id="excludeServiceCheck" class="mt-0.5 rounded text-brand-500 focus:ring-brand-500 w-4 h-4">
+                <div class="text-xs">
+                  <span class="font-bold text-slate-900 dark:text-white flex items-center">
+                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 mr-1 text-rose-500"></i> Exclude IT Service Firms
+                  </span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Filters out TCS, Infosys, Wipro, Cognizant, HCL, Tech Mahindra, LTIMindtree & staffing body shops</span>
+                </div>
+              </label>
+            </div>
+
+          </div>
+        </div>
+      </aside>
+
+      <!-- Jobs Feed & Detail Split (lg:col-span-9) -->
+      <section class="lg:col-span-9 space-y-4">
+        
+        <!-- Results Bar & Controls -->
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 id="resultCountText" class="font-bold text-slate-900 dark:text-white text-base">Loading job openings...</h2>
+              <span id="sourceBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                Live Feed
+              </span>
+            </div>
+            <p id="searchQuerySummary" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Showing all active opportunities</p>
+          </div>
+
+          <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+            <!-- Export Options -->
+            <button id="exportCsvBtn" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Export results to CSV">
+              <i data-lucide="download" class="w-3.5 h-3.5 mr-1.5"></i>
+              CSV
+            </button>
+            <button id="exportJsonBtn" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Export results to JSON">
+              <i data-lucide="code-2" class="w-3.5 h-3.5 mr-1.5"></i>
+              JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Split Grid: Job Cards List (col-span-5) & Job Details View (col-span-7) -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          
+          <!-- Job List Column -->
+          <div class="xl:col-span-5 space-y-3" id="jobCardsContainer">
+            <!-- Job cards rendered here -->
+          </div>
+
+          <!-- Job Details Column / Active Pane -->
+          <div class="xl:col-span-7">
+            <div id="jobDetailsPane" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sticky top-24 shadow-sm min-h-[500px] flex flex-col">
+              <div class="my-auto text-center text-slate-400 dark:text-slate-500 py-16">
+                <i data-lucide="briefcase" class="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-700"></i>
+                <p class="font-medium">Select a job opening to view complete details, qualifications, and direct application link.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <button id="prevPageBtn" disabled class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center">
+            <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> Previous
+          </button>
+          <span id="paginationIndicator" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Page 1</span>
+          <button id="nextPageBtn" class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center">
+            Next <i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i>
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Resume Upload & Profile Modal -->
+  <div id="resumeModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI Resume Matcher</h3>
+        </div>
+        <button id="closeResumeModalBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-sm">
+        
+        <!-- Tab Selector: Upload File or Paste Text -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800">
+          <button id="resumeTabFileBtn" class="pb-2.5 px-4 font-bold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400">Upload PDF / File</button>
+          <button id="resumeTabTextBtn" class="pb-2.5 px-4 font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800">Paste Resume Text</button>
+        </div>
+
+        <!-- File Upload Area -->
+        <div id="resumeFileSection" class="space-y-3">
+          <label class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-500 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/30">
+            <i data-lucide="upload-cloud" class="w-10 h-10 text-brand-500 mb-2"></i>
+            <span class="font-bold text-slate-800 dark:text-slate-200 text-sm">Click to select or drag & drop resume</span>
+            <span class="text-xs text-slate-500 mt-1">Supports PDF or TXT files</span>
+            <input type="file" id="resumeFileInput" accept=".pdf,.txt" class="hidden" />
+          </label>
+          <p id="selectedFileName" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 text-center hidden"></p>
+        </div>
+
+        <!-- Text Paste Area -->
+        <div id="resumeTextSection" class="space-y-2 hidden">
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">Paste your resume content, skills, or LinkedIn bio:</label>
+          <textarea id="resumeTextInput" rows="6" placeholder="Paste your resume text here (e.g. Senior Software Engineer with 5 years experience in Python, FastAPI, React, PostgreSQL, Docker, AWS...)" class="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"></textarea>
+        </div>
+
+        <!-- Action Button -->
+        <button id="processResumeBtn" class="w-full py-3 bg-gradient-to-r from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-2 transition">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Analyze Resume & Enable Matching</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Cover Letter Modal -->
+  <div id="coverLetterModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <i data-lucide="mail-check" class="w-5 h-5 text-indigo-500"></i>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI Tailored Cover Letter</h3>
+        </div>
+        <button id="closeCoverLetterBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-3 flex-1 text-sm">
+        <textarea id="coverLetterText" rows="14" class="w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-sans leading-relaxed outline-none focus:border-brand-500"></textarea>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <button id="copyCoverLetterBtn" class="px-4 py-2 text-xs font-semibold bg-brand-500 text-white rounded-xl hover:bg-brand-600 flex items-center space-x-1.5">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Copy to Clipboard</span>
+        </button>
+        <button id="doneCoverLetterBtn" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bookmarks Modal -->
+  <div id="bookmarksModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <i data-lucide="bookmark" class="w-5 h-5 text-amber-500"></i>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Saved Jobs (<span id="modalBookmarkCount">0</span>)</h3>
+        </div>
+        <button id="closeBookmarksBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="bookmarksList" class="p-5 overflow-y-auto space-y-3 flex-1"></div>
+
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <button id="clearBookmarksBtn" class="text-xs text-rose-500 hover:text-rose-700 font-semibold">Clear All Saved</button>
+        <button id="doneBookmarksBtn" class="px-4 py-2 text-xs font-semibold bg-brand-500 text-white rounded-xl hover:bg-brand-600">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Trends Modal -->
+  <div id="statsModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <i data-lucide="trending-up" class="w-5 h-5 text-brand-500"></i>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Market Hiring Trends & Analytics</h3>
+        </div>
+        <button id="closeStatsBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+        <div>
+          <h4 class="font-bold text-slate-900 dark:text-white mb-3 flex items-center">
+            <i data-lucide="cpu" class="w-4 h-4 mr-2 text-indigo-500"></i> Top In-Demand Skills
+          </h4>
+          <div id="skillsTrendCloud" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-900 dark:text-white mb-3 flex items-center">
+            <i data-lucide="building-2" class="w-4 h-4 mr-2 text-brand-500"></i> Leading Tech Employers Hiring
+          </h4>
+          <div id="companiesTrendGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-900 dark:text-white mb-3 flex items-center">
+            <i data-lucide="map" class="w-4 h-4 mr-2 text-emerald-500"></i> Geographic & Remote Distribution
+          </h4>
+          <div id="locationDistList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 px-4 py-3 rounded-xl shadow-xl text-white text-xs sm:text-sm font-medium flex items-center space-x-2 bg-slate-900 dark:bg-white dark:text-slate-900 pointer-events-none">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 bg-white dark:bg-slate-900 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-1.5">
+        <span class="font-bold text-slate-800 dark:text-slate-200">JobsRadar</span>
+        <span>&middot; Real-time LinkedIn Job Search & AI Resume Matcher</span>
+      </div>
+      <div>
+        <span>Built with FastAPI & Tailwind CSS &middot; Direct LinkedIn links</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/app.js?v=50"></script>
+</body>
+</html>
