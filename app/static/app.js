@@ -517,7 +517,7 @@ function fetchJobs() {
       }
       if (paginationIndicator) paginationIndicator.innerText = 'Page ' + state.page;
       if (prevPageBtn) prevPageBtn.disabled = state.page <= 1;
-      if (nextPageBtn) nextPageBtn.disabled = state.jobs.length < 20;
+      if (nextPageBtn) nextPageBtn.disabled = state.jobs.length === 0;
 
       renderJobsList();
       if (state.jobs.length > 0) selectJob(state.jobs[0].id);

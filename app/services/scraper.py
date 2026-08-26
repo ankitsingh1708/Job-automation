@@ -128,9 +128,13 @@ async def search_linkedin_jobs(
     if cached_data:
         return cached_data
 
-    # Calculate starting offset (each page covers 30-40 jobs)
-    base_start = (page - 1) * 30
-    offsets = [base_start, base_start + 10, base_start + 20, base_start + 30]
+    # Calculate starting offset (each page covers 30-60 jobs)
+    if top_tier_only:
+        base_start = (page - 1) * 50
+        offsets = [base_start, base_start + 10, base_start + 20, base_start + 30, base_start + 40, base_start + 50]
+    else:
+        base_start = (page - 1) * 30
+        offsets = [base_start, base_start + 10, base_start + 20, base_start + 30]
 
     base_params: Dict[str, Any] = {
         'keywords': keywords,
