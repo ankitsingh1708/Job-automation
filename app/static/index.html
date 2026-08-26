@@ -160,12 +160,14 @@
       <!-- Quick Category / Skill Tags -->
       <div class="mt-4 flex items-center flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
         <span class="font-semibold flex items-center"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500 mr-1"></i> Trending:</span>
+        <button type="button" id="quickTierTopBtn" class="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-indigo-500/20 text-amber-900 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-700 hover:border-amber-500 transition shadow-sm flex items-center space-x-1">
+          <span>⭐ 30+ LPA Top Tech</span>
+        </button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Python</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">AI & ML</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Software Engineer</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Full Stack</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">DevOps</button>
-        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Data Scientist</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Remote</button>
       </div>
 
@@ -185,6 +187,19 @@
             <span>Refine Filters</span>
           </div>
           <button id="resetFiltersBtn" class="text-xs text-brand-500 hover:underline font-semibold">Reset</button>
+        </div>
+
+        <!-- ⭐ Top Tier High Pay Filter (30+ LPA) -->
+        <div class="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-brand-500/10 border border-amber-300/80 dark:border-amber-700/60 shadow-sm">
+          <label class="flex items-start space-x-2.5 cursor-pointer">
+            <input type="checkbox" id="topTierOnlyCheck" class="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 border-slate-300 dark:border-slate-700 mt-0.5" />
+            <div>
+              <span class="text-xs font-black text-amber-900 dark:text-amber-300 flex items-center gap-1">
+                <span>⭐ 30+ LPA Top Tech Only</span>
+              </span>
+              <span class="text-[10px] text-slate-600 dark:text-slate-400 block leading-tight mt-0.5">Filter for FAANG, Unicorns (CRED, Swiggy, Zepto, Razorpay), Rippling, D.E. Shaw &amp; Silicon Valley GCCs</span>
+            </div>
+          </label>
         </div>
 
         <!-- Exclude Service Companies Filter -->
@@ -711,6 +726,6 @@
     </div>
   </footer>
 
-  <script src="/static/app.js?v=80"></script>
+  <script src="/static/app.js?v=90"></script>
 </body>
 </html>

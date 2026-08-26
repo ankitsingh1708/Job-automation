@@ -75,6 +75,7 @@ async def search_jobs(
     experience_level: Optional[str] = None,
     date_posted: Optional[str] = None,
     exclude_service_companies: bool = False,
+    top_tier_only: bool = False,
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=50)
 ):
@@ -86,6 +87,7 @@ async def search_jobs(
         experience_level=experience_level,
         date_posted=date_posted,
         exclude_service_companies=exclude_service_companies,
+        top_tier_only=top_tier_only,
         page=page,
         limit=limit
     )

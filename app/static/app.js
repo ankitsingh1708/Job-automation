@@ -11,6 +11,7 @@ var state = {
   experience_level: '',
   date_posted: '',
   exclude_service_companies: false,
+  top_tier_only: false,
   page: 1,
   limit: 35,
   jobs: [],
@@ -26,7 +27,7 @@ function safeCreateIcons() {
   try { if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons(); } catch(e){}
 }
 
-var searchForm, keywordInput, locationInput, filterExp, filterJobType, excludeServiceCheck, resetFiltersBtn;
+var searchForm, keywordInput, locationInput, filterExp, filterJobType, excludeServiceCheck, topTierOnlyCheck, quickTierTopBtn, resetFiltersBtn;
 var jobCardsContainer, jobDetailsPane, resultCountText, searchQuerySummary, sourceBadge;
 var prevPageBtn, nextPageBtn, paginationIndicator, bookmarkCount, modalBookmarkCount;
 var bookmarksModal, openBookmarksBtn, closeBookmarksBtn, doneBookmarksBtn, clearBookmarksBtn, bookmarksList;
@@ -201,6 +202,30 @@ function setupEventListeners() {
     });
   }
 
+  topTierOnlyCheck = document.getElementById('topTierOnlyCheck');
+  quickTierTopBtn = document.getElementById('quickTierTopBtn');
+
+  if (topTierOnlyCheck) {
+    topTierOnlyCheck.addEventListener('change', function(e) {
+      state.top_tier_only = e.target.checked;
+      state.page = 1;
+      fetchJobs();
+    });
+  }
+
+  if (quickTierTopBtn) {
+    quickTierTopBtn.addEventListener('click', function() {
+      if (topTierOnlyCheck) {
+        topTierOnlyCheck.checked = !topTierOnlyCheck.checked;
+        state.top_tier_only = topTierOnlyCheck.checked;
+      } else {
+        state.top_tier_only = !state.top_tier_only;
+      }
+      state.page = 1;
+      fetchJobs();
+    });
+  }
+
   if (resetFiltersBtn) {
     resetFiltersBtn.addEventListener('click', function() {
       if (keywordInput) keywordInput.value = 'Software Engineer';
@@ -212,6 +237,7 @@ function setupEventListeners() {
       state.experience_level = '';
       state.job_type = '';
       state.exclude_service_companies = false;
+      state.top_tier_only = false;
       state.page = 1;
       var defRem = document.querySelector('input[name="filterRemote"][value=""]');
       if (defRem) defRem.checked = true;
@@ -220,6 +246,7 @@ function setupEventListeners() {
       if (filterExp) filterExp.value = '';
       if (filterJobType) filterJobType.value = '';
       if (excludeServiceCheck) excludeServiceCheck.checked = false;
+      if (topTierOnlyCheck) topTierOnlyCheck.checked = false;
       fetchJobs();
     });
   }
@@ -465,6 +492,7 @@ function fetchJobs() {
     limit: state.limit,
     exclude_service_companies: state.exclude_service_companies
   });
+  if (state.top_tier_only) p.append('top_tier_only', 'true');
   if (state.remote) p.append('remote', state.remote);
   if (state.job_type) p.append('job_type', state.job_type);
   if (state.experience_level) p.append('experience_level', state.experience_level);
@@ -545,6 +573,10 @@ function renderJobsList() {
       ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
       : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
 
+    var topTierBadge = job.is_top_tier
+      ? '<span class="px-2 py-0.5 rounded-md font-black bg-gradient-to-r from-amber-100 to-indigo-100 text-amber-900 dark:from-amber-950 dark:to-indigo-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800/80 shadow-xs" title="⭐ Tier-1 High-Pay Employer (30+ LPA)">⭐ 30+ LPA</span>'
+      : '';
+
     var salaryBadge = '';
     if (isExactSalary) {
       salaryBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800 flex items-center gap-1" title="Scraped directly from employer posting">💰 ' + cSalary + '</span>';
@@ -574,6 +606,7 @@ function renderJobsList() {
       + '</div>'
       + '<div class="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">'
       + '<span class="px-2 py-0.5 rounded-md font-semibold ' + wpClass + '">' + cWorkplace + '</span>'
+      + topTierBadge
       + '<span class="px-2 py-0.5 rounded-md font-semibold bg-indigo-50/80 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">🎯 ' + escapeHtml(job.experience_required || '2–4 Yrs') + '</span>'
       + salaryBadge
       + serviceBadge

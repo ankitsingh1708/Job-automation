@@ -116,13 +116,14 @@ async def search_linkedin_jobs(
     experience_level: Optional[str] = None,
     date_posted: Optional[str] = None,
     exclude_service_companies: bool = False,
+    top_tier_only: bool = False,
     page: int = 1,
     limit: int = 40
 ) -> Dict[str, Any]:
     """
     Searches LinkedIn for jobs matching criteria using concurrent multi-batch fetching.
     """
-    cache_key = f"jobs_search_v3:{keywords}:{location}:{remote}:{job_type}:{experience_level}:{date_posted}:{exclude_service_companies}:{page}:{limit}"
+    cache_key = f"jobs_search_v4:{keywords}:{location}:{remote}:{job_type}:{experience_level}:{date_posted}:{exclude_service_companies}:{top_tier_only}:{page}:{limit}"
     cached_data = cache.get(cache_key)
     if cached_data:
         return cached_data
@@ -189,8 +190,8 @@ async def search_linkedin_jobs(
         source = 'fallback'
         all_jobs = generate_mock_jobs(keywords=keywords, location=location, limit=30)
 
-    # Filter out service-based companies if requested, and tag all jobs
-    all_jobs = filter_jobs_by_company(all_jobs, exclude_service=exclude_service_companies)
+    # Filter out service-based companies and filter for top tier if requested
+    all_jobs = filter_jobs_by_company(all_jobs, exclude_service=exclude_service_companies, top_tier_only=top_tier_only)
 
     result = {
         'source': source,
@@ -200,6 +201,7 @@ async def search_linkedin_jobs(
         'keywords': keywords,
         'location': location,
         'exclude_service_companies': exclude_service_companies,
+        'top_tier_only': top_tier_only,
         'error_note': error_message if source == 'fallback' else None,
         'jobs': all_jobs
     }
