@@ -10,7 +10,6 @@ from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
 
 from app.services.profile_store import load_profile, record_question_answer, lookup_known_answer
 
-# Persistent Chrome Profile directory so LinkedIn login session stays preserved
 CHROME_PROFILE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "services", ".chrome_profile")
 os.makedirs(CHROME_PROFILE_DIR, exist_ok=True)
 
@@ -96,11 +95,10 @@ def _run_sync_playwright_apply(
 
     try:
         with sync_playwright() as p:
-            session.log("Opening dedicated Chrome window with persistent login session...")
+            session.log("Opening Chrome window with persistent profile...")
             
             context = None
             try:
-                # Launch persistent Chrome browser window
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=CHROME_PROFILE_DIR,
                     channel="chrome",
@@ -109,12 +107,10 @@ def _run_sync_playwright_apply(
                     args=[
                         "--start-maximized",
                         "--disable-blink-features=AutomationControlled",
-                        "--window-size=1280,850",
-                        "--window-position=50,50"
+                        "--window-size=1280,850"
                     ]
                 )
             except Exception:
-                # Fallback to Chromium persistent context
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=CHROME_PROFILE_DIR,
                     headless=headless,
@@ -122,14 +118,12 @@ def _run_sync_playwright_apply(
                     args=[
                         "--start-maximized",
                         "--disable-blink-features=AutomationControlled",
-                        "--window-size=1280,850",
-                        "--window-position=50,50"
+                        "--window-size=1280,850"
                     ]
                 )
 
             active_page = context.pages[0] if context.pages else context.new_page()
 
-            # Handle new tabs/popups
             def handle_new_page(new_p: Page):
                 nonlocal active_page
                 session.log(f"Switched to application tab: {new_p.url[:60]}...")
@@ -147,24 +141,29 @@ def _run_sync_playwright_apply(
             active_page.bring_to_front()
             time.sleep(3)
 
-            # Check if user needs to log into LinkedIn once
+            # Check if LinkedIn requires sign-in for offsite redirect
             sign_in_prompt = active_page.locator("a:has-text('Sign in'), button:has-text('Sign in')").first
             if sign_in_prompt.count() > 0 and sign_in_prompt.is_visible():
-                session.log("💡 Tip: If prompted to Sign In to LinkedIn in the Chrome window, log in once — your session will be saved permanently!")
+                session.log("💡 Tip: For external company listings, LinkedIn requires a quick 1-time login to forward your application to the employer portal.")
 
-            # 1. Look for and click Easy Apply or Apply on Company Website button
-            session.log("Checking for Apply action buttons...")
+            # Look for and click Easy Apply or Apply on Company Website button
+            session.log("Locating application buttons on page...")
             apply_btn = active_page.locator("button.jobs-apply-button, a.apply-button, button:has-text('Easy Apply'), a:has-text('Apply on company website'), a:has-text('Apply'), button:has-text('Apply')").first
 
             if apply_btn.count() > 0 and apply_btn.is_visible():
                 btn_text = apply_btn.inner_text().strip()
-                session.log(f"Clicking '{btn_text}' button...")
+                session.log(f"Clicking '{btn_text}'...")
                 try:
                     apply_btn.click()
                     time.sleep(3)
                 except Exception as ce:
                     session.log(f"Click notice: {ce}")
-            
+
+            # Check if LinkedIn displayed a sign-in dialog overlay
+            auth_modal = active_page.locator("div.sign-up-modal, div.contextual-sign-in-modal").first
+            if auth_modal.count() > 0 and auth_modal.is_visible():
+                session.log("🔑 Sign-in gate detected. You can sign in once in Chrome, or click 'Open Application Tab Directly' in the modal footer!")
+
             # Switch to newest page if popup opened
             if len(context.pages) > 1:
                 active_page = context.pages[-1]
@@ -296,8 +295,8 @@ def _run_sync_playwright_apply(
                         session.log("All visible fields populated. Ready for review.")
                     else:
                         session.status = "REVIEW_READY"
-                        session.log("Application portal is open in your Chrome window.")
-                        session.log("You can review and complete any company-specific verification directly in the Chrome window!")
+                        session.log("Application portal link is active in your browser.")
+                        session.log("You can review and complete any company-specific verification directly in the browser window!")
                     break
 
             # Keep Chrome open for up to 5 minutes
