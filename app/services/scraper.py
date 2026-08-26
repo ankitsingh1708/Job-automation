@@ -17,6 +17,8 @@ USER_AGENTS = [
 ]
 
 BASE_SEARCH_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search'
+BASE_JOB_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting'
+
 TIME_POSTED_MAP = {
     '24h': 'r86400',
     'day': 'r86400',
