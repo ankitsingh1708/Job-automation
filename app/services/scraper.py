@@ -17,12 +17,20 @@ USER_AGENTS = [
 ]
 
 BASE_SEARCH_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search'
-BASE_JOB_URL = 'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting'
-
 TIME_POSTED_MAP = {
     '24h': 'r86400',
+    'day': 'r86400',
+    'r86400': 'r86400',
+    'past_24h': 'r86400',
+    'past 24 hours': 'r86400',
     'week': 'r604800',
-    'month': 'r2592000'
+    'r604800': 'r604800',
+    'past_week': 'r604800',
+    'past week': 'r604800',
+    'month': 'r2592000',
+    'r2592000': 'r2592000',
+    'past_month': 'r2592000',
+    'past month': 'r2592000'
 }
 
 WORKPLACE_TYPE_MAP = {
