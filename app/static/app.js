@@ -17,7 +17,9 @@ var state = {
   selectedJob: null,
   bookmarks: JSON.parse(localStorage.getItem('saved_jobs') || '[]'),
   resumeProfile: JSON.parse(localStorage.getItem('resume_profile') || 'null'),
-  isLoading: false
+  isLoading: false,
+  activeApplySessionId: null,
+  applyPollingTimer: null
 };
 
 function safeCreateIcons() {
@@ -33,6 +35,12 @@ var openResumeBtn, resumeModal, closeResumeModalBtn, resumeTabFileBtn, resumeTab
 var resumeFileSection, resumeTextSection, resumeFileInput, resumeTextInput, processResumeBtn, selectedFileName;
 var activeResumeBanner, resumeBannerTitle, resumeBannerSkills, resumeAutoSearchBtn, clearResumeBtn, resumeBtnText;
 var coverLetterModal, closeCoverLetterBtn, doneCoverLetterBtn, coverLetterText, copyCoverLetterBtn;
+
+// Auto-Apply Elements
+var autoApplyModal, closeAutoApplyModalBtn, doneAutoApplyBtn, autoApplyJobTitle, autoApplyCompany, autoApplyStatusBadge, autoApplyLogs;
+var autoApplyQuestionCard, promptQuestionText, promptAnswerInput, submitPromptAnswerBtn;
+var openAutoApplySettingsBtn, autoApplySettingsModal, closeAutoApplySettingsBtn, autoApplyProfileForm;
+var profFullName, profEmail, profPhone, profCity, profNotice, profCurrentCtc, profExpectedCtc, profLinkedin, profGithub, profAuth;
 
 document.addEventListener('DOMContentLoaded', function() {
   searchForm = document.getElementById('searchForm');
@@ -87,12 +95,40 @@ document.addEventListener('DOMContentLoaded', function() {
   coverLetterText = document.getElementById('coverLetterText');
   copyCoverLetterBtn = document.getElementById('copyCoverLetterBtn');
 
+  // Auto-Apply Elements
+  autoApplyModal = document.getElementById('autoApplyModal');
+  closeAutoApplyModalBtn = document.getElementById('closeAutoApplyModalBtn');
+  doneAutoApplyBtn = document.getElementById('doneAutoApplyBtn');
+  autoApplyJobTitle = document.getElementById('autoApplyJobTitle');
+  autoApplyCompany = document.getElementById('autoApplyCompany');
+  autoApplyStatusBadge = document.getElementById('autoApplyStatusBadge');
+  autoApplyLogs = document.getElementById('autoApplyLogs');
+  autoApplyQuestionCard = document.getElementById('autoApplyQuestionCard');
+  promptQuestionText = document.getElementById('promptQuestionText');
+  promptAnswerInput = document.getElementById('promptAnswerInput');
+  submitPromptAnswerBtn = document.getElementById('submitPromptAnswerBtn');
+
+  openAutoApplySettingsBtn = document.getElementById('openAutoApplySettingsBtn');
+  autoApplySettingsModal = document.getElementById('autoApplySettingsModal');
+  closeAutoApplySettingsBtn = document.getElementById('closeAutoApplySettingsBtn');
+  autoApplyProfileForm = document.getElementById('autoApplyProfileForm');
+  profFullName = document.getElementById('profFullName');
+  profEmail = document.getElementById('profEmail');
+  profPhone = document.getElementById('profPhone');
+  profCity = document.getElementById('profCity');
+  profNotice = document.getElementById('profNotice');
+  profCurrentCtc = document.getElementById('profCurrentCtc');
+  profExpectedCtc = document.getElementById('profExpectedCtc');
+  profLinkedin = document.getElementById('profLinkedin');
+  profGithub = document.getElementById('profGithub');
+  profAuth = document.getElementById('profAuth');
+
   initTheme();
   updateBookmarkUI();
   updateResumeUI();
   setupEventListeners();
 
-  // Set default search for Software Engineer in India on first load
+  // Load default search for Software Engineer in India
   if (state.resumeProfile && state.resumeProfile.search_queries && state.resumeProfile.search_queries.length) {
     var topQuery = state.resumeProfile.search_queries[0];
     if (keywordInput) keywordInput.value = topQuery;
@@ -120,13 +156,6 @@ function toggleTheme() {
   var isDark = document.documentElement.classList.toggle('dark');
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
   safeCreateIcons();
-}
-
-function quickSearch(term) {
-  if (keywordInput) keywordInput.value = term;
-  state.keywords = term;
-  state.page = 1;
-  fetchJobs();
 }
 
 function setupEventListeners() {
@@ -324,6 +353,32 @@ function setupEventListeners() {
     });
     window.open('/api/export?' + p.toString(), '_blank');
   });
+
+  // Auto-Apply Modal Listeners
+  if (closeAutoApplyModalBtn) closeAutoApplyModalBtn.addEventListener('click', function() {
+    autoApplyModal.classList.add('hidden'); autoApplyModal.classList.remove('flex');
+    if (state.applyPollingTimer) clearInterval(state.applyPollingTimer);
+  });
+  if (doneAutoApplyBtn) doneAutoApplyBtn.addEventListener('click', function() {
+    autoApplyModal.classList.add('hidden'); autoApplyModal.classList.remove('flex');
+    if (state.applyPollingTimer) clearInterval(state.applyPollingTimer);
+  });
+
+  if (submitPromptAnswerBtn) {
+    submitPromptAnswerBtn.addEventListener('click', submitUserPromptAnswer);
+  }
+  if (promptAnswerInput) {
+    promptAnswerInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') submitUserPromptAnswer();
+    });
+  }
+
+  // Auto-Apply Profile Config Listeners
+  if (openAutoApplySettingsBtn) openAutoApplySettingsBtn.addEventListener('click', loadAndOpenAutoApplySettings);
+  if (closeAutoApplySettingsBtn) closeAutoApplySettingsBtn.addEventListener('click', function() {
+    autoApplySettingsModal.classList.add('hidden'); autoApplySettingsModal.classList.remove('flex');
+  });
+  if (autoApplyProfileForm) autoApplyProfileForm.addEventListener('submit', handleSaveAutoApplyProfile);
 }
 
 function handleProcessResume() {
@@ -365,7 +420,7 @@ function handleProcessResume() {
     alert('Resume parsing error: ' + err.message);
   }).finally(function() {
     processResumeBtn.disabled = false;
-    processResumeBtn.innerText = 'Analyze Resume & Enable Matching';
+    processResumeBtn.innerText = 'Analyze Resume & Enable Auto-Apply';
     safeCreateIcons();
   });
 }
@@ -611,14 +666,17 @@ function renderJobDetails(job, fullDetails) {
     + '<button data-detail-bookmark-id="' + escapeHtml(job.id) + '" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-500 transition shrink-0">'
     + '<i data-lucide="bookmark" class="w-5 h-5 ' + bmIcon + '"></i></button>'
     + '</div>'
+
+    // ACTION BUTTONS: Auto-Apply with AI + Direct LinkedIn Apply + Cover Letter
     + '<div class="flex flex-wrap gap-2.5 items-center">'
-    + '<a href="' + escapeHtml(applyUrl) + '" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center px-5 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm shadow-md transition space-x-2">'
-    + '<span>Apply on LinkedIn</span><i data-lucide="external-link" class="w-4 h-4"></i></a>'
-    + '<button id="genCoverLetterBtn" class="px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs sm:text-sm font-semibold transition inline-flex items-center space-x-1.5 shadow-sm">'
-    + '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Cover Letter</span></button>'
-    + '<button id="shareJobBtn" class="px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold transition">'
-    + '<i data-lucide="share-2" class="w-4 h-4"></i></button>'
+    + '<button id="startAutoApplyBtn" class="flex-1 inline-flex items-center justify-center px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-brand-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-500/20 transition space-x-2">'
+    + '<i data-lucide="bot" class="w-4 h-4"></i><span>⚡ Auto-Apply with AI</span></button>'
+    + '<a href="' + escapeHtml(applyUrl) + '" target="_blank" rel="noopener noreferrer" class="px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm transition flex items-center space-x-1.5">'
+    + '<span>Manual</span><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a>'
+    + '<button id="genCoverLetterBtn" class="px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition inline-flex items-center space-x-1.5">'
+    + '<i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i><span>Cover Letter</span></button>'
     + '</div>'
+
     + '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2">'
     + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Workplace</span><span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 block">' + escapeHtml(job.workplace_type) + '</span></div>'
     + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Job Type</span><span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 block">' + escapeHtml(job.job_type) + '</span></div>'
@@ -638,6 +696,14 @@ function renderJobDetails(job, fullDetails) {
 
   var dbBtn = jobDetailsPane.querySelector('[data-detail-bookmark-id]');
   if (dbBtn) dbBtn.addEventListener('click', function() { toggleBookmark(job.id); });
+
+  // Auto-Apply Button Click Handler
+  var aaBtn = document.getElementById('startAutoApplyBtn');
+  if (aaBtn) {
+    aaBtn.addEventListener('click', function() {
+      triggerAutoApply(job);
+    });
+  }
 
   var glBtn = document.getElementById('genCoverLetterBtn');
   if (glBtn) {
@@ -663,19 +729,204 @@ function renderJobDetails(job, fullDetails) {
       .catch(function() { alert('Cover letter generation failed'); })
       .finally(function() {
         glBtn.disabled = false;
-        glBtn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Cover Letter</span>';
+        glBtn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i><span>Cover Letter</span>';
         safeCreateIcons();
       });
     });
   }
 
-  var sBtn = document.getElementById('shareJobBtn');
-  if (sBtn) sBtn.addEventListener('click', function() {
-    navigator.clipboard.writeText(applyUrl);
-    showToast('Link copied!');
-  });
-
   safeCreateIcons();
+}
+
+// ----------------- Auto-Apply Engine UI Logic ----------------- //
+
+function triggerAutoApply(job) {
+  if (!autoApplyModal) return;
+
+  autoApplyJobTitle.innerText = job.title;
+  autoApplyCompany.innerText = (job.company_name || 'Target Employer') + ' \u00b7 Playwright Agent Active';
+  autoApplyStatusBadge.innerText = 'INITIALIZING';
+  autoApplyStatusBadge.className = 'px-2.5 py-0.5 text-[11px] font-black rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300';
+  autoApplyLogs.innerHTML = '<p>[00:00] Initializing Playwright Chromium Browser Agent...</p>';
+  autoApplyQuestionCard.classList.add('hidden');
+
+  autoApplyModal.classList.remove('hidden');
+  autoApplyModal.classList.add('flex');
+  safeCreateIcons();
+
+  var candidateSkills = state.resumeProfile ? (state.resumeProfile.skills || []) : ['Python', 'FastAPI', 'React', 'SQL'];
+  var expYears = state.resumeProfile ? (state.resumeProfile.experience_years || 4) : 4;
+  var applyUrl = job.linkedin_url || ('https://www.linkedin.com/jobs/view/' + job.id);
+
+  fetch('/api/apply/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      job_id: String(job.id),
+      job_title: job.title,
+      company_name: job.company_name,
+      apply_url: applyUrl,
+      candidate_skills: candidateSkills,
+      experience_years: expYears
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    state.activeApplySessionId = res.session_id;
+    if (state.applyPollingTimer) clearInterval(state.applyPollingTimer);
+    state.applyPollingTimer = setInterval(pollApplySessionStatus, 1200);
+  })
+  .catch(function(err) {
+    autoApplyLogs.innerHTML += '<p class="text-rose-400">[Error] Failed to launch Playwright task: ' + escapeHtml(err.message) + '</p>';
+  });
+}
+
+function pollApplySessionStatus() {
+  if (!state.activeApplySessionId) return;
+
+  fetch('/api/apply/session/' + state.activeApplySessionId)
+    .then(function(r) { return r.json(); })
+    .then(function(session) {
+      autoApplyStatusBadge.innerText = session.status;
+      
+      // Update Stepper
+      updateStepperUI(session.status);
+
+      // Render Logs
+      if (session.logs && session.logs.length) {
+        autoApplyLogs.innerHTML = session.logs.map(function(l) {
+          var colorClass = l.indexOf('Prompting') >= 0 ? 'text-amber-300 font-bold' : l.indexOf('🎉') >= 0 ? 'text-emerald-300 font-bold' : 'text-emerald-400';
+          return '<p class="' + colorClass + '">' + escapeHtml(l) + '</p>';
+        }).join('');
+        autoApplyLogs.scrollTop = autoApplyLogs.scrollHeight;
+      }
+
+      // Check if recruiter asked a question that needs user input!
+      if (session.status === 'WAITING_FOR_USER_INPUT' && session.pending_question) {
+        autoApplyStatusBadge.className = 'px-2.5 py-0.5 text-[11px] font-black rounded-full bg-amber-100 text-amber-900 border border-amber-300 animate-pulse';
+        promptQuestionText.innerText = session.pending_question.question;
+        promptAnswerInput.value = session.pending_question.suggested_answer || '';
+        autoApplyQuestionCard.classList.remove('hidden');
+        promptAnswerInput.focus();
+      } else {
+        autoApplyQuestionCard.classList.add('hidden');
+      }
+
+      if (session.status === 'REVIEW_READY' || session.status === 'SUBMITTED') {
+        autoApplyStatusBadge.className = 'px-2.5 py-0.5 text-[11px] font-black rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300';
+        if (state.applyPollingTimer) clearInterval(state.applyPollingTimer);
+      } else if (session.status === 'ERROR') {
+        autoApplyStatusBadge.className = 'px-2.5 py-0.5 text-[11px] font-black rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+        if (state.applyPollingTimer) clearInterval(state.applyPollingTimer);
+      }
+    })
+    .catch(function(e) {
+      console.error('Session poll error', e);
+    });
+}
+
+function updateStepperUI(status) {
+  var s1 = document.getElementById('step1');
+  var s2 = document.getElementById('step2');
+  var s3 = document.getElementById('step3');
+  var s4 = document.getElementById('step4');
+  if (!s1 || !s2 || !s3 || !s4) return;
+
+  var activeClass = 'p-2 rounded-xl bg-indigo-500 text-white font-bold shadow-sm';
+  var doneClass = 'p-2 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold';
+  var idleClass = 'p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700';
+
+  if (status === 'CONNECTING' || status === 'INITIALIZING') {
+    s1.className = activeClass; s2.className = idleClass; s3.className = idleClass; s4.className = idleClass;
+  } else if (status === 'OPENING_PORTAL') {
+    s1.className = doneClass; s2.className = activeClass; s3.className = idleClass; s4.className = idleClass;
+  } else if (status === 'FILLING_FORM' || status === 'WAITING_FOR_USER_INPUT') {
+    s1.className = doneClass; s2.className = doneClass; s3.className = activeClass; s4.className = idleClass;
+  } else if (status === 'REVIEW_READY' || status === 'SUBMITTED') {
+    s1.className = doneClass; s2.className = doneClass; s3.className = doneClass; s4.className = doneClass;
+  }
+}
+
+function submitUserPromptAnswer() {
+  if (!state.activeApplySessionId) return;
+  var ans = promptAnswerInput.value.trim();
+  if (!ans) { alert('Please enter your answer.'); return; }
+
+  submitPromptAnswerBtn.disabled = true;
+  submitPromptAnswerBtn.innerText = 'Submitting...';
+
+  fetch('/api/apply/session/' + state.activeApplySessionId + '/answer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answer: ans })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    autoApplyQuestionCard.classList.add('hidden');
+    showToast('Answer submitted & saved to profile memory!');
+  })
+  .catch(function(e) {
+    alert('Answer submission failed: ' + e.message);
+  })
+  .finally(function() {
+    submitPromptAnswerBtn.disabled = false;
+    submitPromptAnswerBtn.innerHTML = '<span>Submit &amp; Continue Application</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>';
+    safeCreateIcons();
+  });
+}
+
+function loadAndOpenAutoApplySettings() {
+  fetch('/api/apply/profile')
+    .then(function(r) { return r.json(); })
+    .then(function(prof) {
+      if (profFullName) profFullName.value = prof.full_name || '';
+      if (profEmail) profEmail.value = prof.email || '';
+      if (profPhone) profPhone.value = prof.phone || '';
+      if (profCity) profCity.value = prof.city || '';
+      if (profNotice) profNotice.value = prof.notice_period || '30 days';
+      if (profCurrentCtc) profCurrentCtc.value = prof.current_ctc || '18 LPA';
+      if (profExpectedCtc) profExpectedCtc.value = prof.expected_ctc || '30 LPA';
+      if (profLinkedin) profLinkedin.value = prof.linkedin_url || '';
+      if (profGithub) profGithub.value = prof.github_url || '';
+      if (profAuth) profAuth.value = prof.work_authorization || 'Yes';
+
+      if (autoApplySettingsModal) {
+        autoApplySettingsModal.classList.remove('hidden');
+        autoApplySettingsModal.classList.add('flex');
+      }
+      safeCreateIcons();
+    });
+}
+
+function handleSaveAutoApplyProfile(e) {
+  e.preventDefault();
+  var payload = {
+    full_name: profFullName ? profFullName.value.trim() : '',
+    email: profEmail ? profEmail.value.trim() : '',
+    phone: profPhone ? profPhone.value.trim() : '',
+    city: profCity ? profCity.value.trim() : '',
+    notice_period: profNotice ? profNotice.value : '30 days',
+    current_ctc: profCurrentCtc ? profCurrentCtc.value.trim() : '18 LPA',
+    expected_ctc: profExpectedCtc ? profExpectedCtc.value.trim() : '30 LPA',
+    linkedin_url: profLinkedin ? profLinkedin.value.trim() : '',
+    github_url: profGithub ? profGithub.value.trim() : '',
+    work_authorization: profAuth ? profAuth.value : 'Yes'
+  };
+
+  fetch('/api/apply/profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    autoApplySettingsModal.classList.add('hidden');
+    autoApplySettingsModal.classList.remove('flex');
+    showToast('Auto-Apply profile & screening preferences saved!');
+  })
+  .catch(function(err) {
+    alert('Save failed: ' + err.message);
+  });
 }
 
 function toggleBookmark(jobId) {

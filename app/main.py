@@ -16,6 +16,12 @@ from app.services.resume_parser import (
     calculate_job_match,
     generate_custom_cover_letter
 )
+from app.services.profile_store import load_profile, save_profile, record_question_answer
+from app.services.auto_applier import (
+    start_auto_apply_task,
+    get_session,
+    answer_session_question
+)
 
 app = FastAPI(
     title="LinkedIn Job Openings Portal & AI Resume Matcher",
@@ -45,27 +51,34 @@ class CoverLetterPayload(BaseModel):
     resume_profile: Dict[str, Any]
     job: Dict[str, Any]
 
-@app.get("/")
-async def root():
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+class StartApplyPayload(BaseModel):
+    job_id: str
+    job_title: str
+    company_name: str
+    apply_url: str
+    candidate_skills: Optional[List[str]] = []
+    experience_years: Optional[int] = 4
 
-@app.get("/api/health")
-async def health_check():
-    return {"status": "ok", "service": "linkedin-jobs-portal"}
+class AnswerPayload(BaseModel):
+    answer: str
+
+@app.get("/")
+async def read_index():
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 @app.get("/api/jobs/search")
 async def search_jobs(
-    keywords: str = Query("", description="Search job title, skill, or company"),
-    location: str = Query("", description="City, state, or country"),
-    remote: Optional[str] = Query(None, description="Workplace type: remote, hybrid, on-site"),
-    job_type: Optional[str] = Query(None, description="Job type: full-time, part-time, contract, internship"),
-    experience_level: Optional[str] = Query(None, description="Experience: internship, entry, associate, mid-senior, director, executive"),
-    date_posted: Optional[str] = Query(None, description="Time posted: 24h, week, month"),
-    exclude_service_companies: bool = Query(False, description="Exclude Indian service-based & staffing companies"),
-    page: int = Query(1, ge=1, description="Page number"),
-    limit: int = Query(40, ge=1, le=100, description="Results per page")
+    keywords: str = Query(""),
+    location: str = Query(""),
+    remote: Optional[str] = None,
+    job_type: Optional[str] = None,
+    experience_level: Optional[str] = None,
+    date_posted: Optional[str] = None,
+    exclude_service_companies: bool = False,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=50)
 ):
-    results = await search_linkedin_jobs(
+    return await search_linkedin_jobs(
         keywords=keywords,
         location=location,
         remote=remote,
@@ -76,66 +89,109 @@ async def search_jobs(
         page=page,
         limit=limit
     )
-    return results
 
 @app.get("/api/jobs/{job_id}")
 async def job_detail(job_id: str):
-    details = await get_job_details(job_id)
-    if not details:
-        raise HTTPException(status_code=404, detail="Job opening not found")
-    return details
+    job = await get_job_details(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job posting not found")
+    return job
 
 @app.post("/api/resume/parse-file")
-async def parse_resume_file(file: UploadFile = File(...)):
-    contents = await file.read()
-    filename = (file.filename or "").lower()
+async def resume_parse_file(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith((".pdf", ".txt")):
+        raise HTTPException(status_code=400, detail="Only PDF or TXT resume files are supported")
     
-    if filename.endswith(".pdf"):
-        text = extract_text_from_pdf(contents)
+    content = await file.read()
+    if file.filename.lower().endswith(".pdf"):
+        raw_text = extract_text_from_pdf(content)
     else:
-        try:
-            text = contents.decode("utf-8", errors="ignore")
-        except Exception:
-            text = ""
-
-    if not text.strip():
-        raise HTTPException(status_code=400, detail="Could not extract readable text from resume file.")
-
-    profile = parse_resume_text(text)
-    profile["filename"] = file.filename
-    return profile
+        raw_text = content.decode("utf-8", errors="ignore")
+    
+    if not raw_text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from the uploaded file")
+    
+    return parse_resume_text(raw_text)
 
 @app.post("/api/resume/parse-text")
-async def parse_resume_text_endpoint(payload: ResumeTextPayload):
-    text = payload.text.strip()
-    if not text:
-        raise HTTPException(status_code=400, detail="Resume text cannot be empty.")
-    profile = parse_resume_text(text)
-    profile["filename"] = "Pasted Resume Text"
-    return profile
+async def resume_parse_text(payload: ResumeTextPayload):
+    if not payload.text.strip():
+        raise HTTPException(status_code=400, detail="Empty resume text provided")
+    return parse_resume_text(payload.text)
 
 @app.post("/api/resume/match")
-async def match_resume_with_job(payload: MatchPayload):
-    match_result = calculate_job_match(payload.resume_profile, payload.job)
-    return match_result
+async def resume_match(payload: MatchPayload):
+    return calculate_job_match(payload.resume_profile, payload.job)
 
 @app.post("/api/resume/cover-letter")
-async def generate_cover_letter(payload: CoverLetterPayload):
-    letter = generate_custom_cover_letter(payload.resume_profile, payload.job)
-    return {"cover_letter": letter}
+async def create_cover_letter(payload: CoverLetterPayload):
+    return generate_custom_cover_letter(payload.resume_profile, payload.job)
+
+# ----------------- Auto-Apply Endpoints ----------------- #
+
+@app.get("/api/apply/profile")
+async def get_candidate_profile():
+    return load_profile()
+
+@app.post("/api/apply/profile")
+async def update_candidate_profile(profile: Dict[str, Any] = Body(...)):
+    return save_profile(profile)
+
+@app.post("/api/apply/start")
+async def start_apply(payload: StartApplyPayload):
+    session_id = await start_auto_apply_task(
+        job_id=payload.job_id,
+        job_title=payload.job_title,
+        company_name=payload.company_name,
+        apply_url=payload.apply_url,
+        candidate_skills=payload.candidate_skills,
+        experience_years=payload.experience_years,
+        headless=False
+    )
+    return {"session_id": session_id, "status": "STARTED"}
+
+@app.get("/api/apply/session/{session_id}")
+async def get_apply_session(session_id: str):
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {
+        "session_id": session.session_id,
+        "job_id": session.job_id,
+        "job_title": session.job_title,
+        "company_name": session.company_name,
+        "status": session.status,
+        "logs": session.logs,
+        "pending_question": session.pending_question,
+        "error_message": session.error_message
+    }
+
+@app.post("/api/apply/session/{session_id}/answer")
+async def answer_apply_session(session_id: str, payload: AnswerPayload):
+    success = answer_session_question(session_id, payload.answer)
+    if not success:
+        raise HTTPException(status_code=400, detail="Could not submit answer. Session may not be waiting for input.")
+    return {"status": "ANSWER_SUBMITTED"}
+
+# ----------------- Stats & Export ----------------- #
 
 @app.get("/api/stats")
-async def get_market_stats():
-    trending_roles = [t["title"] for t in JOB_TEMPLATES[:6]]
-    popular_skills = ["Python", "React", "AWS", "Kubernetes", "SQL", "Docker", "Machine Learning", "TypeScript", "Go", "Terraform"]
+async def get_platform_stats():
+    trending_roles = [
+        {"role": "Python Backend Engineer", "growth": "+42%", "openings": "4,200+"},
+        {"role": "AI / GenAI & LLM Specialist", "growth": "+88%", "openings": "2,850+"},
+        {"role": "Full Stack Developer (React/FastAPI)", "growth": "+34%", "openings": "5,100+"},
+        {"role": "DevOps & Cloud SRE", "growth": "+29%", "openings": "3,400+"},
+        {"role": "Data Scientist & ML", "growth": "+25%", "openings": "2,600+"},
+    ]
+    popular_skills = ["Python", "FastAPI", "React", "AWS", "Kubernetes", "SQL", "Docker", "Machine Learning", "TypeScript", "Go"]
     top_hiring_companies = [c["name"] for c in COMPANIES[:8]]
     location_distribution = [
-        {"location": "Remote", "percentage": 42},
-        {"location": "San Francisco, CA", "percentage": 18},
-        {"location": "New York, NY", "percentage": 15},
-        {"location": "Seattle, WA", "percentage": 10},
-        {"location": "Austin, TX", "percentage": 8},
-        {"location": "Other Tech Hubs", "percentage": 7},
+        {"location": "Bengaluru, India", "percentage": 38},
+        {"location": "Hyderabad, India", "percentage": 22},
+        {"location": "Pune, India", "percentage": 15},
+        {"location": "Delhi NCR, India", "percentage": 14},
+        {"location": "Remote, India", "percentage": 11},
     ]
 
     return {
@@ -143,7 +199,7 @@ async def get_market_stats():
         "popular_skills": popular_skills,
         "top_companies": top_hiring_companies,
         "location_distribution": location_distribution,
-        "avg_salary_range": "$130,000 - $190,000 / yr"
+        "avg_salary_range": "₹16 LPA - ₹38 LPA"
     }
 
 @app.get("/api/export")

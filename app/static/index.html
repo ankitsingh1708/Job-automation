@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LinkedIn Jobs Explorer & AI Resume Matcher</title>
+  <title>JobsRadar - Real-time LinkedIn Job Search & AI Resume Matcher</title>
   
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -12,20 +17,23 @@
       darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
           colors: {
             brand: {
-              50: '#eef6fc',
-              100: '#e0eff9',
-              500: '#0a66c2',
-              600: '#0855a4',
-              700: '#004182',
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#0a66c2', // LinkedIn Primary Blue
+              600: '#004182',
+              700: '#003366',
             }
           }
         }
       }
     }
   </script>
-  
+
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
@@ -48,13 +56,19 @@
               <span class="font-bold text-lg tracking-tight">Jobs<span class="text-brand-500">Radar</span></span>
               <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-500/20">AI Matcher</span>
             </div>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">LinkedIn Openings & Smart Resume Matching</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">LinkedIn Openings, LeetCode CTC &amp; Auto-Apply</p>
           </div>
         </div>
 
         <!-- Right Quick Actions -->
         <div class="flex items-center space-x-2 sm:space-x-3">
           
+          <!-- Auto-Apply Profile Config Button -->
+          <button id="openAutoApplySettingsBtn" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Configure candidate auto-fill details">
+            <i data-lucide="bot" class="w-4 h-4 mr-1.5 text-indigo-500"></i>
+            <span class="hidden md:inline">Auto-Apply Profile</span>
+          </button>
+
           <!-- Resume Matcher Button -->
           <button id="openResumeBtn" class="inline-flex items-center px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 shadow-md shadow-indigo-500/20 transition">
             <i data-lucide="file-text" class="w-4 h-4 mr-1.5"></i>
@@ -83,45 +97,34 @@
     </div>
   </header>
 
-  <!-- Hero & Primary Search Header -->
-  <section class="bg-gradient-to-b from-brand-50/60 to-transparent dark:from-slate-900/50 dark:to-transparent border-b border-slate-200/60 dark:border-slate-800/60 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto">
+  <!-- Hero & Unified Search Bar Area -->
+  <section class="bg-gradient-to-b from-brand-50/50 to-transparent dark:from-slate-900/40 dark:to-transparent pt-8 pb-6 border-b border-slate-200/60 dark:border-slate-800/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Resume Active Profile Banner (if resume loaded) -->
-      <div id="activeResumeBanner" class="hidden mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-brand-50 dark:from-indigo-950/40 dark:to-brand-950/40 border border-indigo-200 dark:border-indigo-800/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+      <!-- Active Resume Banner (if uploaded) -->
+      <div id="activeResumeBanner" class="hidden mb-6 p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shrink-0 shadow-md">
-            <i data-lucide="user-check" class="w-5 h-5"></i>
+          <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold text-lg shrink-0">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
           </div>
           <div>
             <div class="flex items-center space-x-2">
-              <h3 class="font-bold text-sm text-slate-900 dark:text-white" id="resumeBannerTitle">Resume Profile Active</h3>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">AI Scoring Enabled</span>
+              <span class="font-bold text-sm text-indigo-950 dark:text-indigo-200" id="resumeBannerTitle">Resume Active</span>
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Live AI Matcher</span>
             </div>
-            <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5" id="resumeBannerSkills">Extracted skills: Python, React, AWS</p>
+            <p class="text-xs text-indigo-700/80 dark:text-indigo-300/80" id="resumeBannerSkills">Detected technical skills</p>
           </div>
         </div>
-        <div class="flex items-center space-x-2 shrink-0">
-          <button id="resumeAutoSearchBtn" class="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold shadow-sm transition flex items-center space-x-1.5">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>Auto-Search Matching Jobs</span>
+        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+          <button id="resumeAutoSearchBtn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center space-x-1">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            <span>Search Tailored Jobs</span>
           </button>
-          <button id="clearResumeBtn" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition" title="Clear Resume">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          <button id="clearResumeBtn" class="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 transition">Clear</button>
         </div>
       </div>
 
-      <div class="max-w-3xl mb-6">
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-          Find & Match Jobs on <span class="text-brand-500">LinkedIn</span> with AI
-        </h1>
-        <p class="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400">
-          Search live openings or upload your resume to automatically rank jobs by match percentage and generate tailored applications.
-        </p>
-      </div>
-
-      <!-- Main Search Bar -->
+      <!-- Search Input Container -->
       <form id="searchForm" autocomplete="off" class="bg-white dark:bg-slate-900 p-2.5 sm:p-3 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-2.5">
         <!-- Keyword Input -->
         <div class="flex-1 flex items-center px-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition">
@@ -160,264 +163,473 @@
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Python</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">AI & ML</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Software Engineer</button>
-        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">React Developer</button>
-        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">DevOps / AWS</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Full Stack</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">DevOps</button>
         <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Data Scientist</button>
+        <button type="button" class="quick-tag px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 transition">Remote</button>
       </div>
+
     </div>
   </section>
 
-  <!-- Main Content Layout -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
-    
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+  <!-- Main Content Layout (Sidebar + Results + Details Pane) -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
-      <!-- Filters Sidebar (lg:col-span-3) -->
-      <aside class="lg:col-span-3">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sticky top-24 shadow-sm">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div class="flex items-center space-x-2 font-bold text-slate-900 dark:text-white">
-              <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i>
-              <span>Filters</span>
-            </div>
-            <button id="resetFiltersBtn" class="text-xs text-brand-500 hover:text-brand-700 font-medium">Reset</button>
+      <!-- Left Filter Sidebar (3 cols) -->
+      <aside class="lg:col-span-3 space-y-5 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center space-x-2 font-bold text-sm text-slate-900 dark:text-white">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand-500"></i>
+            <span>Refine Filters</span>
           </div>
+          <button id="resetFiltersBtn" class="text-xs text-brand-500 hover:underline font-semibold">Reset</button>
+        </div>
 
-          <div class="space-y-6 pt-4 text-sm">
-            <!-- Workplace Type -->
+        <!-- Exclude Service Companies Filter -->
+        <div class="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/60">
+          <label class="flex items-start space-x-2.5 cursor-pointer">
+            <input type="checkbox" id="excludeServiceCheck" class="w-4 h-4 rounded text-brand-500 focus:ring-brand-500 border-slate-300 dark:border-slate-700 mt-0.5" />
             <div>
-              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Workplace Type</label>
-              <div class="space-y-2">
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterRemote" value="" checked class="text-brand-500 focus:ring-brand-500">
-                  <span>Any</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterRemote" value="remote" class="text-brand-500 focus:ring-brand-500">
-                  <span class="flex items-center"><i data-lucide="globe" class="w-3.5 h-3.5 mr-1.5 text-emerald-500"></i> Remote</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterRemote" value="hybrid" class="text-brand-500 focus:ring-brand-500">
-                  <span class="flex items-center"><i data-lucide="building" class="w-3.5 h-3.5 mr-1.5 text-indigo-500"></i> Hybrid</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterRemote" value="on-site" class="text-brand-500 focus:ring-brand-500">
-                  <span class="flex items-center"><i data-lucide="map-pin" class="w-3.5 h-3.5 mr-1.5 text-slate-400"></i> On-site</span>
-                </label>
-              </div>
+              <span class="text-xs font-bold text-slate-900 dark:text-amber-200 block">Exclude IT Service Firms</span>
+              <span class="text-[10px] text-slate-500 dark:text-slate-400 block leading-tight mt-0.5">Hides TCS, Infosys, Wipro, Accenture, Cognizant, staffing body shops &middot; prioritize direct product startups</span>
             </div>
+          </label>
+        </div>
 
-            <!-- Date Posted -->
-            <div>
-              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Date Posted</label>
-              <div class="space-y-2">
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterDate" value="" checked class="text-brand-500 focus:ring-brand-500">
-                  <span>Any time</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterDate" value="24h" class="text-brand-500 focus:ring-brand-500">
-                  <span>Past 24 hours</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterDate" value="week" class="text-brand-500 focus:ring-brand-500">
-                  <span>Past week</span>
-                </label>
-                <label class="flex items-center space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input type="radio" name="filterDate" value="month" class="text-brand-500 focus:ring-brand-500">
-                  <span>Past month</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Experience Level -->
-            <div>
-              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Experience Level</label>
-              <select id="filterExp" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-brand-500">
-                <option value="">All Experience Levels</option>
-                <option value="internship">Internship</option>
-                <option value="entry">Entry Level</option>
-                <option value="associate">Associate</option>
-                <option value="mid-senior">Mid-Senior Level</option>
-                <option value="director">Director</option>
-                <option value="executive">Executive</option>
-              </select>
-            </div>
-
-            <!-- Job Type -->
-            <div>
-              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5">Job Type</label>
-              <select id="filterJobType" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-brand-500">
-                <option value="">All Employment Types</option>
-                <option value="full-time">Full-time</option>
-                <option value="part-time">Part-time</option>
-                <option value="contract">Contract</option>
-                <option value="internship">Internship</option>
-              </select>
-            </div>
-
-            <!-- Company Type Filter / Ignore Service Companies -->
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <label class="block font-semibold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Company Filter</label>
-              <label class="flex items-start space-x-2.5 text-slate-700 dark:text-slate-300 cursor-pointer p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 hover:border-brand-500 transition">
-                <input type="checkbox" id="excludeServiceCheck" class="mt-0.5 rounded text-brand-500 focus:ring-brand-500 w-4 h-4">
-                <div class="text-xs">
-                  <span class="font-bold text-slate-900 dark:text-white flex items-center">
-                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 mr-1 text-rose-500"></i> Exclude IT Service Firms
-                  </span>
-                  <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Filters out TCS, Infosys, Wipro, Cognizant, HCL, Tech Mahindra, LTIMindtree & staffing body shops</span>
-                </div>
-              </label>
-            </div>
-
+        <!-- Workplace Type Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Workplace</label>
+          <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterRemote" value="" checked class="text-brand-500 focus:ring-brand-500" />
+              <span>All Workplaces</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterRemote" value="remote" class="text-brand-500 focus:ring-brand-500" />
+              <span>Remote Only</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterRemote" value="hybrid" class="text-brand-500 focus:ring-brand-500" />
+              <span>Hybrid</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterRemote" value="onsite" class="text-brand-500 focus:ring-brand-500" />
+              <span>On-site</span>
+            </label>
           </div>
         </div>
+
+        <!-- Experience Level -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Experience Level</label>
+          <select id="filterExp" class="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500">
+            <option value="">Any Experience</option>
+            <option value="internship">Internship</option>
+            <option value="entry">Entry level (0-2 yrs)</option>
+            <option value="associate">Associate / Mid-level (2-5 yrs)</option>
+            <option value="senior">Mid-Senior / Senior (5+ yrs)</option>
+            <option value="director">Director / Executive</option>
+          </select>
+        </div>
+
+        <!-- Job Type Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Employment Type</label>
+          <select id="filterJobType" class="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500">
+            <option value="">Any Type</option>
+            <option value="full-time">Full-time</option>
+            <option value="contract">Contract</option>
+            <option value="part-time">Part-time</option>
+            <option value="internship">Internship</option>
+          </select>
+        </div>
+
+        <!-- Date Posted Filter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Date Posted</label>
+          <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterDate" value="" checked class="text-brand-500 focus:ring-brand-500" />
+              <span>Any Time</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterDate" value="r86400" class="text-brand-500 focus:ring-brand-500" />
+              <span>Past 24 Hours</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterDate" value="r604800" class="text-brand-500 focus:ring-brand-500" />
+              <span>Past Week</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
+              <input type="radio" name="filterDate" value="r2592000" class="text-brand-500 focus:ring-brand-500" />
+              <span>Past Month</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Export Actions -->
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Export Data</span>
+          <div class="flex items-center space-x-2">
+            <button id="exportCsvBtn" class="flex-1 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-300 transition text-center flex items-center justify-center space-x-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>CSV</span>
+            </button>
+            <button id="exportJsonBtn" class="flex-1 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-300 transition text-center flex items-center justify-center space-x-1">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>JSON</span>
+            </button>
+          </div>
+        </div>
+
       </aside>
 
-      <!-- Jobs Feed & Detail Split (lg:col-span-9) -->
-      <section class="lg:col-span-9 space-y-4">
+      <!-- Center Job Openings List (5 cols) -->
+      <section class="lg:col-span-5 space-y-4">
         
-        <!-- Results Bar & Controls -->
-        <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <!-- Results Header & Pagination Counter -->
+        <div class="flex items-center justify-between px-1">
           <div>
-            <div class="flex items-center space-x-2">
-              <h2 id="resultCountText" class="font-bold text-slate-900 dark:text-white text-base">Loading job openings...</h2>
-              <span id="sourceBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                Live Feed
-              </span>
-            </div>
-            <p id="searchQuerySummary" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Showing all active opportunities</p>
+            <h2 id="resultCountText" class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
+              Loading Openings...
+            </h2>
+            <p id="searchQuerySummary" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Targeting live opportunities
+            </p>
           </div>
-
-          <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
-            <!-- Export Options -->
-            <button id="exportCsvBtn" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Export results to CSV">
-              <i data-lucide="download" class="w-3.5 h-3.5 mr-1.5"></i>
-              CSV
-            </button>
-            <button id="exportJsonBtn" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Export results to JSON">
-              <i data-lucide="code-2" class="w-3.5 h-3.5 mr-1.5"></i>
-              JSON
-            </button>
+          
+          <div class="flex items-center space-x-2">
+            <span id="sourceBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span> Live LinkedIn
+            </span>
           </div>
         </div>
 
-        <!-- Split Grid: Job Cards List (col-span-5) & Job Details View (col-span-7) -->
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          
-          <!-- Job List Column -->
-          <div class="xl:col-span-5 space-y-3" id="jobCardsContainer">
-            <!-- Job cards rendered here -->
-          </div>
-
-          <!-- Job Details Column / Active Pane -->
-          <div class="xl:col-span-7">
-            <div id="jobDetailsPane" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sticky top-24 shadow-sm min-h-[500px] flex flex-col">
-              <div class="my-auto text-center text-slate-400 dark:text-slate-500 py-16">
-                <i data-lucide="briefcase" class="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-700"></i>
-                <p class="font-medium">Select a job opening to view complete details, qualifications, and direct application link.</p>
+        <!-- Job Cards Container (Populated via JS) -->
+        <div id="jobCardsContainer" class="space-y-3">
+          <!-- Skeletons loaded initially -->
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-xl skeleton shrink-0"></div>
+              <div class="flex-1 space-y-2">
+                <div class="h-4 skeleton rounded-md w-3/4"></div>
+                <div class="h-3 skeleton rounded-md w-1/2"></div>
               </div>
             </div>
+            <div class="h-10 skeleton rounded-xl"></div>
           </div>
-
         </div>
 
-        <!-- Pagination -->
-        <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <button id="prevPageBtn" disabled class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center">
-            <i data-lucide="chevron-left" class="w-4 h-4 mr-1"></i> Previous
+        <!-- Pagination Controls -->
+        <div class="flex items-center justify-between pt-2 px-1">
+          <button id="prevPageBtn" disabled class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition">
+            &larr; Previous
           </button>
-          <span id="paginationIndicator" class="text-xs font-semibold text-slate-500 dark:text-slate-400">Page 1</span>
-          <button id="nextPageBtn" class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center">
-            Next <i data-lucide="chevron-right" class="w-4 h-4 ml-1"></i>
+          <span id="paginationIndicator" class="text-xs text-slate-500 font-medium">Page 1</span>
+          <button id="nextPageBtn" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition">
+            Next &rarr;
           </button>
         </div>
 
       </section>
 
-    </div>
+      <!-- Right Job Details Sticky Pane (4 cols) -->
+      <section class="lg:col-span-4 sticky top-20">
+        <div id="jobDetailsPane" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm min-h-[500px] flex flex-col justify-between">
+          <div class="my-auto text-center text-slate-400 dark:text-slate-500 py-16">
+            <i data-lucide="layers" class="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-600"></i>
+            <p class="font-medium text-sm">Select a job card to view full details</p>
+          </div>
+        </div>
+      </section>
 
+    </div>
   </main>
 
-  <!-- Resume Upload & Profile Modal -->
-  <div id="resumeModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Auto-Apply Live Execution & Interactive Question Prompt Modal -->
+  <div id="autoApplyModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Header -->
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-indigo-500/10 to-brand-500/10">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-md">
+            <i data-lucide="bot" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white" id="autoApplyJobTitle">Auto-Applying...</h3>
+              <span id="autoApplyStatusBadge" class="px-2.5 py-0.5 text-[11px] font-black rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">INITIALIZING</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400" id="autoApplyCompany">Target Company &middot; Playwright Browser Agent</p>
+          </div>
+        </div>
+        <button id="closeAutoApplyModalBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Main Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-sm">
+        
+        <!-- Live Stepper -->
+        <div class="grid grid-cols-4 gap-2 text-center text-[11px] font-bold">
+          <div id="step1" class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            1. Connect
+          </div>
+          <div id="step2" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+            2. Portal
+          </div>
+          <div id="step3" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+            3. Fill Form
+          </div>
+          <div id="step4" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+            4. Review
+          </div>
+        </div>
+
+        <!-- Interactive Question Solver Card (Appears if recruiter asked unknown question) -->
+        <div id="autoApplyQuestionCard" class="hidden p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-600 shadow-lg space-y-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs"><i data-lucide="help-circle" class="w-4 h-4"></i></span>
+            <h4 class="font-extrabold text-slate-900 dark:text-white text-sm">Recruiter Screening Question Encountered</h4>
+          </div>
+          <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200" id="promptQuestionText">
+            How many years of relevant experience do you have?
+          </p>
+          
+          <div id="questionInputContainer" class="space-y-2">
+            <input 
+              type="text" 
+              id="promptAnswerInput" 
+              placeholder="Enter your answer (e.g. 5 years / 28 LPA / 30 days)..." 
+              class="w-full p-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+            />
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button id="submitPromptAnswerBtn" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-1.5">
+              <span>Submit &amp; Continue Application</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Terminal Event Logs -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 mr-1.5 text-indigo-500"></i> Live Execution Logs
+            </span>
+            <span class="text-[10px] text-slate-400">Headful Chromium Active</span>
+          </div>
+          <div id="autoApplyLogs" class="p-3.5 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs max-h-48 overflow-y-auto space-y-1 border border-slate-800 shadow-inner">
+            <p>[14:30:00] Initializing browser worker...</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <span class="text-xs text-slate-500">Human-in-the-loop: Review and submit in browser</span>
+        <button id="doneAutoApplyBtn" class="px-5 py-2 text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700 transition">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. Auto-Apply Settings / Candidate Profile Modal -->
+  <div id="autoApplySettingsModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
+          <i data-lucide="bot" class="w-5 h-5 text-indigo-500"></i>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Auto-Apply Profile &amp; Memory</h3>
+        </div>
+        <button id="closeAutoApplySettingsBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="autoApplyProfileForm" class="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
+            <input type="text" id="profFullName" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
           </div>
-          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI Resume Matcher</h3>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Email</label>
+            <input type="email" id="profEmail" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Phone (with country code)</label>
+            <input type="text" id="profPhone" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" placeholder="+91 9876543210" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">City / Location</label>
+            <input type="text" id="profCity" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" placeholder="Bengaluru, India" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Notice Period</label>
+            <select id="profNotice" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              <option value="Immediate">Immediate</option>
+              <option value="15 days">15 days</option>
+              <option value="30 days">30 days</option>
+              <option value="60 days">60 days</option>
+              <option value="90 days">90 days</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Current CTC</label>
+            <input type="text" id="profCurrentCtc" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" placeholder="18 LPA" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Expected CTC</label>
+            <input type="text" id="profExpectedCtc" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" placeholder="30 LPA" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">LinkedIn Profile URL</label>
+            <input type="url" id="profLinkedin" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">GitHub / Portfolio URL</label>
+            <input type="url" id="profGithub" class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex justify-between items-center">
+          <div>
+            <span class="font-bold block">Legally Authorized to Work in India?</span>
+            <span class="text-slate-400 text-[10px]">Auto-answers authorization questions</span>
+          </div>
+          <select id="profAuth" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold">
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end pt-3">
+          <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">
+            Save Auto-Apply Profile
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Resume Upload Modal -->
+  <div id="resumeModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI Resume Matcher &amp; Auto-Apply</h3>
         </div>
         <button id="closeResumeModalBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-sm">
-        
-        <!-- Tab Selector: Upload File or Paste Text -->
-        <div class="flex border-b border-slate-200 dark:border-slate-800">
-          <button id="resumeTabFileBtn" class="pb-2.5 px-4 font-bold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400">Upload PDF / File</button>
-          <button id="resumeTabTextBtn" class="pb-2.5 px-4 font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800">Paste Resume Text</button>
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-4 flex-1">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Upload your resume PDF or paste your background summary. Our engine extracts your technical skills, experience level, and automatically calculates 0–100% Match Scores &amp; 1-Click Auto-Applies for you!
+        </p>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 dark:border-slate-800 text-xs">
+          <button id="resumeTabFileBtn" class="pb-2.5 px-4 font-bold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400">
+            Upload PDF / TXT
+          </button>
+          <button id="resumeTabTextBtn" class="pb-2.5 px-4 font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800">
+            Paste Text
+          </button>
         </div>
 
-        <!-- File Upload Area -->
+        <!-- File Upload Section -->
         <div id="resumeFileSection" class="space-y-3">
-          <label class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand-500 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/30">
-            <i data-lucide="upload-cloud" class="w-10 h-10 text-brand-500 mb-2"></i>
-            <span class="font-bold text-slate-800 dark:text-slate-200 text-sm">Click to select or drag & drop resume</span>
-            <span class="text-xs text-slate-500 mt-1">Supports PDF or TXT files</span>
+          <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-brand-500 rounded-2xl p-6 text-center transition cursor-pointer" onclick="document.getElementById('resumeFileInput').click()">
+            <i data-lucide="upload-cloud" class="w-10 h-10 text-brand-500 mx-auto mb-2"></i>
+            <p class="font-bold text-xs text-slate-800 dark:text-slate-200">Click to select resume file</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Supports PDF or TXT up to 5MB</p>
             <input type="file" id="resumeFileInput" accept=".pdf,.txt" class="hidden" />
-          </label>
-          <p id="selectedFileName" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 text-center hidden"></p>
+          </div>
+          <p id="selectedFileName" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hidden text-center truncate"></p>
         </div>
 
-        <!-- Text Paste Area -->
-        <div id="resumeTextSection" class="space-y-2 hidden">
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">Paste your resume content, skills, or LinkedIn bio:</label>
-          <textarea id="resumeTextInput" rows="6" placeholder="Paste your resume text here (e.g. Senior Software Engineer with 5 years experience in Python, FastAPI, React, PostgreSQL, Docker, AWS...)" class="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"></textarea>
+        <!-- Text Input Section -->
+        <div id="resumeTextSection" class="space-y-3 hidden">
+          <textarea 
+            id="resumeTextInput" 
+            rows="7" 
+            placeholder="Paste your resume content, experience summary, and key skills here..." 
+            class="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white outline-none focus:border-brand-500"
+          ></textarea>
         </div>
-
-        <!-- Action Button -->
-        <button id="processResumeBtn" class="w-full py-3 bg-gradient-to-r from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-2 transition">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span>Analyze Resume & Enable Matching</span>
-        </button>
 
       </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center bg-slate-50 dark:bg-slate-900/50 space-x-2">
+        <button id="processResumeBtn" class="px-5 py-2.5 text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-md transition flex items-center space-x-1.5">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Analyze Resume &amp; Enable Auto-Apply</span>
+        </button>
+      </div>
+
     </div>
   </div>
 
-  <!-- Cover Letter Modal -->
+  <!-- 4. Cover Letter Modal -->
   <div id="coverLetterModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
-          <i data-lucide="mail-check" class="w-5 h-5 text-indigo-500"></i>
-          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI Tailored Cover Letter</h3>
+          <i data-lucide="file-check" class="w-5 h-5 text-indigo-500"></i>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI-Generated Tailored Cover Letter</h3>
         </div>
         <button id="closeCoverLetterBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="p-5 overflow-y-auto space-y-3 flex-1 text-sm">
-        <textarea id="coverLetterText" rows="14" class="w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-sans leading-relaxed outline-none focus:border-brand-500"></textarea>
+      <div class="p-6 overflow-y-auto space-y-3 flex-1">
+        <textarea id="coverLetterText" rows="12" class="w-full p-4 font-mono text-xs rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white outline-none focus:border-brand-500 leading-relaxed"></textarea>
       </div>
 
       <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-        <button id="copyCoverLetterBtn" class="px-4 py-2 text-xs font-semibold bg-brand-500 text-white rounded-xl hover:bg-brand-600 flex items-center space-x-1.5">
-          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        <button id="copyCoverLetterBtn" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+          <i data-lucide="copy" class="w-4 h-4"></i>
           <span>Copy to Clipboard</span>
         </button>
-        <button id="doneCoverLetterBtn" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl">Close</button>
+        <button id="doneCoverLetterBtn" class="px-4 py-2 text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700">
+          Close
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Bookmarks Modal -->
+  <!-- 5. Bookmarks Modal -->
   <div id="bookmarksModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -439,13 +651,13 @@
     </div>
   </div>
 
-  <!-- Market Trends Modal -->
+  <!-- 6. Market Trends Modal -->
   <div id="statsModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
           <i data-lucide="trending-up" class="w-5 h-5 text-brand-500"></i>
-          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Market Hiring Trends & Analytics</h3>
+          <h3 class="font-bold text-lg text-slate-900 dark:text-white">Market Hiring Trends &amp; Analytics</h3>
         </div>
         <button id="closeStatsBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -469,7 +681,7 @@
 
         <div>
           <h4 class="font-bold text-slate-900 dark:text-white mb-3 flex items-center">
-            <i data-lucide="map" class="w-4 h-4 mr-2 text-emerald-500"></i> Geographic & Remote Distribution
+            <i data-lucide="map" class="w-4 h-4 mr-2 text-emerald-500"></i> Geographic &amp; Remote Distribution
           </h4>
           <div id="locationDistList" class="space-y-2"></div>
         </div>
@@ -488,14 +700,14 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
       <div class="flex items-center space-x-1.5">
         <span class="font-bold text-slate-800 dark:text-slate-200">JobsRadar</span>
-        <span>&middot; Real-time LinkedIn Job Search & AI Resume Matcher</span>
+        <span>&middot; Real-time LinkedIn Job Search, AI Matcher &amp; Auto-Applier</span>
       </div>
       <div>
-        <span>Built with FastAPI & Tailwind CSS &middot; Direct LinkedIn links</span>
+        <span>Built with FastAPI &amp; Playwright &middot; Direct LinkedIn links</span>
       </div>
     </div>
   </footer>
 
-  <script src="/static/app.js?v=50"></script>
+  <script src="/static/app.js?v=60"></script>
 </body>
 </html>
