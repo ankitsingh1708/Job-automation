@@ -758,6 +758,9 @@ function triggerAutoApply(job) {
   var expYears = state.resumeProfile ? (state.resumeProfile.experience_years || 4) : 4;
   var applyUrl = job.linkedin_url || ('https://www.linkedin.com/jobs/view/' + job.id);
 
+  var directLink = document.getElementById('autoApplyDirectLink');
+  if (directLink) directLink.href = applyUrl;
+
   fetch('/api/apply/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -92,15 +92,28 @@ def _run_sync_playwright_apply(
 
     try:
         with sync_playwright() as p:
-            session.log("Launching Chromium browser window in foreground...")
-            browser = p.chromium.launch(
-                headless=headless,
-                args=[
-                    "--start-maximized",
-                    "--disable-blink-features=AutomationControlled",
-                    "--window-position=40,40"
-                ]
-            )
+            browser = None
+            try:
+                session.log("Launching your Google Chrome browser window...")
+                browser = p.chromium.launch(
+                    channel="chrome",
+                    headless=headless,
+                    args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+                )
+            except Exception:
+                try:
+                    session.log("Launching Edge browser window...")
+                    browser = p.chromium.launch(
+                        channel="msedge",
+                        headless=headless,
+                        args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+                    )
+                except Exception:
+                    session.log("Launching Chromium browser window...")
+                    browser = p.chromium.launch(
+                        headless=headless,
+                        args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+                    )
 
             context = browser.new_context(
                 no_viewport=True,
