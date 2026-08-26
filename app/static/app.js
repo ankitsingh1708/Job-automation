@@ -15,7 +15,9 @@ var state = {
   page: 1,
   limit: 35,
   jobs: [],
+  posts: [],
   selectedJob: null,
+  currentView: 'jobs',
   bookmarks: JSON.parse(localStorage.getItem('saved_jobs') || '[]'),
   resumeProfile: JSON.parse(localStorage.getItem('resume_profile') || 'null'),
   isLoading: false,
@@ -42,6 +44,10 @@ var autoApplyModal, closeAutoApplyModalBtn, doneAutoApplyBtn, autoApplyJobTitle,
 var autoApplyQuestionCard, promptQuestionText, promptAnswerInput, submitPromptAnswerBtn;
 var openAutoApplySettingsBtn, autoApplySettingsModal, closeAutoApplySettingsBtn, autoApplyProfileForm;
 var profFullName, profEmail, profPhone, profCity, profNotice, profCurrentCtc, profExpectedCtc, profLinkedin, profGithub, profAuth;
+
+// Recruiter Posts & Cold Email Elements
+var viewJobsTabBtn, viewPostsTabBtn, jobsMainSection, postsViewSection, postsCardsContainer, postsCountBadge;
+var coldEmailModal, closeColdEmailBtn, doneColdEmailBtn, copyColdEmailBtn, copyRecipientEmailBtn, coldEmailRecipient, coldEmailSubject, coldEmailBody, coldEmailTitle, coldEmailSubtitle;
 
 document.addEventListener('DOMContentLoaded', function() {
   searchForm = document.getElementById('searchForm');
@@ -406,6 +412,63 @@ function setupEventListeners() {
     autoApplySettingsModal.classList.add('hidden'); autoApplySettingsModal.classList.remove('flex');
   });
   if (autoApplyProfileForm) autoApplyProfileForm.addEventListener('submit', handleSaveAutoApplyProfile);
+
+  // View Switcher Tabs
+  viewJobsTabBtn = document.getElementById('viewJobsTabBtn');
+  viewPostsTabBtn = document.getElementById('viewPostsTabBtn');
+  jobsMainSection = document.getElementById('jobsMainSection');
+  postsViewSection = document.getElementById('postsViewSection');
+  postsCardsContainer = document.getElementById('postsCardsContainer');
+  postsCountBadge = document.getElementById('postsCountBadge');
+
+  if (viewJobsTabBtn) {
+    viewJobsTabBtn.addEventListener('click', function() {
+      switchView('jobs');
+    });
+  }
+
+  if (viewPostsTabBtn) {
+    viewPostsTabBtn.addEventListener('click', function() {
+      switchView('posts');
+    });
+  }
+
+  // Cold Email Modal Listeners
+  coldEmailModal = document.getElementById('coldEmailModal');
+  closeColdEmailBtn = document.getElementById('closeColdEmailBtn');
+  doneColdEmailBtn = document.getElementById('doneColdEmailBtn');
+  copyColdEmailBtn = document.getElementById('copyColdEmailBtn');
+  copyRecipientEmailBtn = document.getElementById('copyRecipientEmailBtn');
+  coldEmailRecipient = document.getElementById('coldEmailRecipient');
+  coldEmailSubject = document.getElementById('coldEmailSubject');
+  coldEmailBody = document.getElementById('coldEmailBody');
+  coldEmailTitle = document.getElementById('coldEmailTitle');
+  coldEmailSubtitle = document.getElementById('coldEmailSubtitle');
+
+  if (closeColdEmailBtn) closeColdEmailBtn.addEventListener('click', function() {
+    coldEmailModal.classList.add('hidden'); coldEmailModal.classList.remove('flex');
+  });
+  if (doneColdEmailBtn) doneColdEmailBtn.addEventListener('click', function() {
+    coldEmailModal.classList.add('hidden'); coldEmailModal.classList.remove('flex');
+  });
+  if (copyColdEmailBtn) {
+    copyColdEmailBtn.addEventListener('click', function() {
+      if (coldEmailBody) {
+        navigator.clipboard.writeText(coldEmailBody.value)
+          .then(function() { showToast('✅ Cold email copied to clipboard!'); })
+          .catch(function() { showToast('Copied'); });
+      }
+    });
+  }
+  if (copyRecipientEmailBtn) {
+    copyRecipientEmailBtn.addEventListener('click', function() {
+      if (coldEmailRecipient) {
+        navigator.clipboard.writeText(coldEmailRecipient.value)
+          .then(function() { showToast('✅ Recruiter email copied: ' + coldEmailRecipient.value); })
+          .catch(function() { showToast('Copied'); });
+      }
+    });
+  }
 }
 
 function handleProcessResume() {
@@ -1050,3 +1113,172 @@ function showToast(message) {
     toast.classList.add('opacity-0', 'translate-y-20');
   }, 2800);
 }
+
+function switchView(viewName) {
+  state.currentView = viewName;
+  if (viewName === 'posts') {
+    if (jobsMainSection) jobsMainSection.classList.add('hidden');
+    if (postsViewSection) postsViewSection.classList.remove('hidden');
+    if (viewPostsTabBtn) {
+      viewPostsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-md shadow-indigo-600/20 flex items-center space-x-2 transition';
+    }
+    if (viewJobsTabBtn) {
+      viewJobsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 flex items-center space-x-2 transition';
+    }
+    fetchPosts();
+  } else {
+    if (postsViewSection) postsViewSection.classList.add('hidden');
+    if (jobsMainSection) jobsMainSection.classList.remove('hidden');
+    if (viewJobsTabBtn) {
+      viewJobsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-brand-500 text-white shadow-md shadow-brand-500/20 flex items-center space-x-2 transition';
+    }
+    if (viewPostsTabBtn) {
+      viewPostsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-500 flex items-center space-x-2 transition';
+    }
+    fetchJobs();
+  }
+  safeCreateIcons();
+}
+
+function fetchPosts() {
+  if (postsCardsContainer) {
+    postsCardsContainer.innerHTML = '<div class="col-span-full py-16 text-center text-slate-400 space-y-3"><div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div><p class="text-xs font-semibold">Scanning LinkedIn hiring feed & extracting recruiter contacts...</p></div>';
+  }
+  if (postsCountBadge) postsCountBadge.innerText = 'Scanning feed...';
+
+  var p = new URLSearchParams({
+    keywords: state.keywords || 'Software Engineer',
+    location: state.location || 'India',
+    top_tier_only: state.top_tier_only
+  });
+
+  fetch('/api/posts/search?' + p.toString())
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      state.posts = data.posts || [];
+      if (postsCountBadge) postsCountBadge.innerText = state.posts.length + ' Live Hiring Posts Found';
+      renderPostsList();
+    })
+    .catch(function(err) {
+      console.error('Posts fetch error', err);
+      if (postsCardsContainer) {
+        postsCardsContainer.innerHTML = '<div class="col-span-full py-12 text-center text-rose-500 text-xs">Failed to load hiring posts.</div>';
+      }
+    });
+}
+
+function renderPostsList() {
+  if (!postsCardsContainer) return;
+  if (!state.posts.length) {
+    postsCardsContainer.innerHTML = '<div class="col-span-full py-16 text-center text-slate-500"><p class="font-bold text-sm">No recruiter hiring posts found matching your keywords.</p></div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < state.posts.length; i++) {
+    var p = state.posts[i];
+    var authorName = escapeHtml(p.author_name || 'Hiring Manager');
+    var authorTitle = escapeHtml(p.author_title || 'Engineering Leader');
+    var authorAvatar = p.author_avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authorName);
+    var content = escapeHtml(p.content || '');
+    var postedTime = escapeHtml(p.posted_time || 'Recent');
+    var expBadge = p.experience_required ? '<span class="px-2 py-0.5 rounded-md font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">🎯 ' + escapeHtml(p.experience_required) + '</span>' : '';
+    var salaryBadge = p.salary_snippet ? '<span class="px-2 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">💰 ' + escapeHtml(p.salary_snippet) + '</span>' : '';
+    var tierBadge = p.is_top_tier ? '<span class="px-2 py-0.5 rounded-md font-black bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">⭐ 30+ LPA</span>' : '';
+
+    var primaryEmail = (p.extracted_emails && p.extracted_emails.length) ? p.extracted_emails[0] : '';
+    var emailActionBadge = primaryEmail
+      ? '<button onclick="copyDirectEmail(\'' + escapeHtml(primaryEmail) + '\')" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 transition" title="Click to copy recruiter email"><i data-lucide="mail" class="w-3.5 h-3.5 text-indigo-500"></i> <span>' + escapeHtml(primaryEmail) + '</span> <i data-lucide="copy" class="w-3 h-3 text-slate-400"></i></button>'
+      : '<span class="text-xs text-slate-400">DM on LinkedIn</span>';
+
+    var skillsHtml = '';
+    if (p.skills && p.skills.length) {
+      skillsHtml = '<div class="flex flex-wrap gap-1 mt-2">' + p.skills.map(function(s) {
+        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">' + escapeHtml(s) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    html += '<div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:border-indigo-400 dark:hover:border-indigo-600 transition space-y-4">'
+      + '<div>'
+      + '<div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">'
+      + '<div class="flex items-center space-x-3">'
+      + '<img src="' + escapeHtml(authorAvatar) + '" class="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0" alt="' + authorName + '" />'
+      + '<div class="min-w-0">'
+      + '<h4 class="font-bold text-sm text-slate-900 dark:text-white truncate">' + authorName + '</h4>'
+      + '<p class="text-xs text-slate-500 truncate">' + authorTitle + '</p>'
+      + '</div>'
+      + '</div>'
+      + '<span class="text-[11px] text-slate-400 shrink-0">' + postedTime + '</span>'
+      + '</div>'
+      + '<div class="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">'
+      + tierBadge
+      + expBadge
+      + salaryBadge
+      + '</div>'
+      + '<div class="mt-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed font-normal line-clamp-6 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">'
+      + content
+      + '</div>'
+      + skillsHtml
+      + '</div>'
+      + '<div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">'
+      + emailActionBadge
+      + '<div class="flex items-center space-x-2 justify-end">'
+      + '<button onclick="openColdEmailForPostIndex(' + i + ')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-indigo-500 to-brand-500 hover:from-indigo-600 hover:to-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition">'
+      + '<i data-lucide="sparkles" class="w-3.5 h-3.5"></i>'
+      + '<span>AI Cold Email</span>'
+      + '</button>'
+      + '<a href="' + escapeHtml(p.post_url) + '" target="_blank" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center space-x-1 transition">'
+      + '<span>Open Post</span>'
+      + '<i data-lucide="external-link" class="w-3.5 h-3.5 ml-1"></i>'
+      + '</a>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  postsCardsContainer.innerHTML = html;
+  safeCreateIcons();
+}
+
+function copyDirectEmail(emailStr) {
+  navigator.clipboard.writeText(emailStr)
+    .then(function() { showToast('✅ Copied recruiter email: ' + emailStr); })
+    .catch(function() { showToast('Copied'); });
+}
+
+function openColdEmailForPostIndex(postIdx) {
+  var post = state.posts[postIdx];
+  if (!post) return;
+
+  if (coldEmailRecipient) coldEmailRecipient.value = (post.extracted_emails && post.extracted_emails.length) ? post.extracted_emails[0] : 'hiring@company.com';
+  if (coldEmailTitle) coldEmailTitle.innerText = 'Cold Outreach: ' + (post.author_company || 'Engineering Team');
+  if (coldEmailSubtitle) coldEmailSubtitle.innerText = 'To ' + (post.author_name || 'Hiring Manager') + ' (' + (post.author_title || '') + ')';
+  
+  if (coldEmailSubject) coldEmailSubject.value = 'Generating email...';
+  if (coldEmailBody) coldEmailBody.value = 'Drafting personalized outreach email based on post and your resume...';
+
+  if (coldEmailModal) {
+    coldEmailModal.classList.remove('hidden');
+    coldEmailModal.classList.add('flex');
+    safeCreateIcons();
+  }
+
+  fetch('/api/posts/cold-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      post: post,
+      resume_profile: state.resumeProfile
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (coldEmailSubject) coldEmailSubject.value = data.subject || 'Application: Software Engineer';
+    if (coldEmailBody) coldEmailBody.value = data.body || '';
+  })
+  .catch(function(err) {
+    console.error('Cold email error', err);
+    if (coldEmailBody) coldEmailBody.value = 'Failed to generate cold email.';
+  });
+}
+

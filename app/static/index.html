@@ -174,8 +174,23 @@
     </div>
   </section>
 
-  <!-- Main Content Layout (Sidebar + Results + Details Pane) -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+  <!-- View Mode Switcher: Official Jobs vs Recruiter Hiring Posts -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
+    <div class="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-3 flex-wrap gap-y-2">
+      <button id="viewJobsTabBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-brand-500 text-white shadow-md shadow-brand-500/20 flex items-center space-x-2 transition">
+        <i data-lucide="briefcase" class="w-4 h-4"></i>
+        <span>💼 Official Job Openings</span>
+      </button>
+      <button id="viewPostsTabBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-500 flex items-center space-x-2 transition">
+        <i data-lucide="megaphone" class="w-4 h-4 text-indigo-500"></i>
+        <span>📢 Recruiter Hiring Posts (Hidden Market)</span>
+        <span class="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-indigo-500 to-brand-500 text-white animate-pulse">NEW</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. Main Official Jobs Layout (Sidebar + Results + Details Pane) -->
+  <main id="jobsMainSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
       <!-- Left Filter Sidebar (3 cols) -->
@@ -363,7 +378,74 @@
     </div>
   </main>
 
+  <!-- 2. Recruiter Hiring Posts View Section (Hidden Job Market) -->
+  <section id="postsViewSection" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
+    <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-500/10 via-brand-500/10 to-transparent p-4 rounded-2xl border border-indigo-200 dark:border-indigo-800/60">
+      <div>
+        <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i>
+          <span>Direct Founder &amp; Recruiter Hiring Posts</span>
+        </h3>
+        <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Scraped directly from LinkedIn Feed &middot; 1-click recruiter email copy &amp; AI cold outreach</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span id="postsCountBadge" class="px-3 py-1 text-xs font-bold rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300">Loading Posts...</span>
+      </div>
+    </div>
+
+    <!-- Posts Grid Container -->
+    <div id="postsCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Dynamic Post Cards will render here -->
+    </div>
+  </section>
+
   <!-- ==================== MODALS ==================== -->
+
+  <!-- Cold Email Outreach Modal -->
+  <div id="coldEmailModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-indigo-500/10 to-brand-500/10">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+            <i data-lucide="mail" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white" id="coldEmailTitle">AI Cold Outreach Email</h3>
+            <p class="text-xs text-slate-500" id="coldEmailSubtitle">Tailored to hiring manager from their post</p>
+          </div>
+        </div>
+        <button id="closeColdEmailBtn" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wider">Recipient Email</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="coldEmailRecipient" readonly class="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-brand-600 dark:text-brand-400 outline-none" />
+            <button id="copyRecipientEmailBtn" class="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold text-slate-700 dark:text-slate-300 transition shrink-0">Copy</button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wider">Email Subject</label>
+          <input type="text" id="coldEmailSubject" class="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wider">Email Body</label>
+          <textarea id="coldEmailBody" rows="12" class="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-sans leading-relaxed text-slate-800 dark:text-slate-200 outline-none"></textarea>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <button id="copyColdEmailBtn" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-2">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Copy Complete Email</span>
+        </button>
+        <button id="doneColdEmailBtn" class="px-5 py-2 text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl hover:bg-slate-300 transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- 1. Auto-Apply Live Execution & Interactive Question Prompt Modal -->
   <div id="autoApplyModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md hidden items-center justify-center p-4">
@@ -726,6 +808,6 @@
     </div>
   </footer>
 
-  <script src="/static/app.js?v=100"></script>
+  <script src="/static/app.js?v=110"></script>
 </body>
 </html>
