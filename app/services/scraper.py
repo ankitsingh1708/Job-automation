@@ -56,6 +56,47 @@ EXPERIENCE_LEVEL_MAP = {
     'executive': '6'
 }
 
+def extract_experience_required(description: str = '', title: str = '') -> str:
+    full = (title + ' ' + (description or '')).strip()
+    if not full:
+        return '1–3 Years'
+        
+    if re.search(r'\b(fresher|entry level|graduate trainee|0\s*-\s*1\s*years?|no experience|intern|internship)\b', full, re.I):
+        return '0–1 Years (Fresher)'
+        
+    # Range like '3-5 years', '3 to 5 years', '3 - 6 yrs'
+    m_range = re.search(r'(\d{1,2})\s*(?:-|to|–)\s*(\d{1,2})\s*(?:\+)?\s*(?:years?|yrs?)(?:\s*(?:of)?\s*(?:relevant|hands-on|industry|software)?\s*experience)?', full, re.I)
+    if m_range:
+        return f"{m_range.group(1)}–{m_range.group(2)} Years"
+        
+    # Minimum like '5+ years', 'minimum 3 years', 'at least 4 years'
+    m_min = re.search(r'(?:min(?:imum)?|at least|\+)?\s*(\d{1,2})\s*\+\s*(?:years?|yrs?)(?:\s*(?:of)?\s*(?:experience)?)?', full, re.I)
+    if m_min:
+        return f"{m_min.group(1)}+ Years"
+        
+    m_min2 = re.search(r'(?:min(?:imum)?|at least)\s*(\d{1,2})\s*(?:years?|yrs?)', full, re.I)
+    if m_min2:
+        return f"{m_min2.group(1)}+ Years"
+        
+    m_gen = re.search(r'(\d{1,2})\s*(?:years?|yrs?)(?:\s*(?:of)?\s*(?:relevant|hands-on|industry)?\s*experience)', full, re.I)
+    if m_gen:
+        return f"{m_gen.group(1)}+ Years"
+
+    # Title-based fallback calibration
+    t_lower = title.lower()
+    if any(w in t_lower for w in ['principal', 'staff', 'architect', 'director', 'vp', 'head']):
+        return '8–12+ Years'
+    elif any(w in t_lower for w in ['lead', 'tech lead', 'manager', 'iv', '4']):
+        return '6–9 Years'
+    elif any(w in t_lower for w in ['senior', 'sr', 'iii', '3', 'expert']):
+        return '4–7 Years'
+    elif any(w in t_lower for w in ['ii', '2', 'mid', 'middle']):
+        return '2–5 Years'
+    elif any(w in t_lower for w in ['junior', 'jr', 'entry', 'associate', 'i', '1', 'intern', 'trainee']):
+        return '0–2 Years'
+        
+    return '2–4 Years'
+
 async def fetch_single_batch(client: httpx.AsyncClient, params: Dict[str, Any], headers: Dict[str, Any]) -> List[Dict[str, Any]]:
     try:
         resp = await client.get(BASE_SEARCH_URL, params=params, headers=headers)
@@ -235,6 +276,9 @@ def parse_job_cards(html_content: str) -> List[Dict[str, Any]]:
             elif 'hybrid' in loc_lower or 'hybrid' in title_lower:
                 workplace_type = 'Hybrid'
 
+            # Experience Required Extraction
+            exp_req = extract_experience_required(title=title)
+
             parsed_jobs.append({
                 'id': str(job_id),
                 'title': title,
@@ -246,6 +290,7 @@ def parse_job_cards(html_content: str) -> List[Dict[str, Any]]:
                 'workplace_type': workplace_type,
                 'job_type': 'Full-time',
                 'experience_level': 'Mid-Senior level',
+                'experience_required': exp_req,
                 'salary': salary_data['salary'],
                 'salary_type': salary_data['salary_type'],
                 'is_salary_estimated': salary_data.get('is_estimated', False),
@@ -304,6 +349,9 @@ async def get_job_details(job_id: str) -> Dict[str, Any]:
                     description_text=description_text
                 )
 
+                # Extract Experience Required from full description & title
+                exp_req = extract_experience_required(description=description_text, title=title)
+
                 # Criteria list
                 criteria = {}
                 for item in soup.find_all('li', class_=re.compile(r'description__job-criteria-item')):
@@ -319,6 +367,7 @@ async def get_job_details(job_id: str) -> Dict[str, Any]:
                     'salary': salary_data['salary'],
                     'salary_type': salary_data['salary_type'],
                     'is_salary_estimated': salary_data.get('is_estimated', False),
+                    'experience_required': exp_req,
                     'description_html': description_html,
                     'description_text': description_text,
                     'criteria': criteria,

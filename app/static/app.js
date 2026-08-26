@@ -574,6 +574,7 @@ function renderJobsList() {
       + '</div>'
       + '<div class="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">'
       + '<span class="px-2 py-0.5 rounded-md font-semibold ' + wpClass + '">' + cWorkplace + '</span>'
+      + '<span class="px-2 py-0.5 rounded-md font-semibold bg-indigo-50/80 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">🎯 ' + escapeHtml(job.experience_required || '2–4 Yrs') + '</span>'
       + salaryBadge
       + serviceBadge
       + '<span class="text-slate-400 dark:text-slate-500 ml-auto">' + cPosted + '</span>'
@@ -680,7 +681,7 @@ function renderJobDetails(job, fullDetails) {
     + '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2">'
     + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Workplace</span><span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 block">' + escapeHtml(job.workplace_type) + '</span></div>'
     + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Job Type</span><span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 block">' + escapeHtml(job.job_type) + '</span></div>'
-    + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Experience</span><span class="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 block">' + escapeHtml(job.experience_level) + '</span></div>'
+    + '<div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"><span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Required Exp</span><span class="font-bold text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 mt-0.5 block truncate">🎯 ' + escapeHtml(job.experience_required || (details && details.experience_required) || '2–4 Years') + '</span></div>'
     + '<div class="p-3 rounded-xl ' + salaryBoxClass + ' border">'
     + '<span class="text-[11px] font-semibold ' + salaryLabelClass + ' uppercase tracking-wider block">' + salaryLabel + '</span>'
     + '<span class="font-bold text-xs sm:text-sm ' + salaryValClass + ' mt-0.5 block truncate">' + escapeHtml(salaryDisplay) + '</span>'
