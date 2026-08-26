@@ -6,7 +6,7 @@ import threading
 import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from playwright.sync_api import sync_playwright, Browser, Page
+from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
 
 from app.services.profile_store import load_profile, record_question_answer, lookup_known_answer
 
@@ -70,7 +70,6 @@ def start_auto_apply_task(
     )
     ACTIVE_SESSIONS[session_id] = session
 
-    # Run in dedicated thread for Windows & Uvicorn stability
     worker_thread = threading.Thread(
         target=_run_sync_playwright_apply,
         args=(session, resume_path, candidate_skills or [], experience_years, headless),
@@ -93,53 +92,84 @@ def _run_sync_playwright_apply(
 
     try:
         with sync_playwright() as p:
-            session.log("Launching Chromium browser window...")
+            session.log("Launching Chromium browser window in foreground...")
             browser = p.chromium.launch(
                 headless=headless,
-                args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+                args=[
+                    "--start-maximized",
+                    "--disable-blink-features=AutomationControlled",
+                    "--window-position=40,40"
+                ]
             )
 
             context = browser.new_context(
-                viewport={"width": 1280, "height": 850},
+                no_viewport=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             )
-            page = context.new_page()
+            
+            active_page = context.new_page()
+
+            # Listen for new tabs / popups (e.g. redirected to company career portal)
+            def handle_new_page(new_p: Page):
+                nonlocal active_page
+                session.log(f"Detected application popup/tab: {new_p.url[:60]}...")
+                active_page = new_p
+                try:
+                    active_page.bring_to_front()
+                except Exception:
+                    pass
+
+            context.on("page", handle_new_page)
 
             session.status = "OPENING_PORTAL"
-            session.log(f"Navigating to job URL: {session.apply_url}")
-            page.goto(session.apply_url, wait_until="domcontentloaded", timeout=45000)
+            session.log(f"Opening Job URL: {session.apply_url}")
+            active_page.goto(session.apply_url, wait_until="domcontentloaded", timeout=45000)
+            active_page.bring_to_front()
             time.sleep(3)
 
-            session.status = "FILLING_FORM"
-            session.log("Scanning page structure for application inputs...")
+            # 1. Look for and click Easy Apply or Apply on Company Website button
+            session.log("Checking for Apply action buttons...")
+            apply_btn = active_page.locator("button.jobs-apply-button, a.apply-button, button:has-text('Easy Apply'), a:has-text('Apply on company website'), a:has-text('Apply'), button:has-text('Apply')").first
 
-            # 1. Look for Easy Apply or Apply buttons
-            easy_apply_btn = page.locator("button:has-text('Easy Apply'), button.jobs-apply-button, a:has-text('Apply')").first
-            if easy_apply_btn.count() > 0 and easy_apply_btn.is_visible():
-                session.log("Found 'Easy Apply' button. Clicking...")
+            if apply_btn.count() > 0 and apply_btn.is_visible():
+                btn_text = apply_btn.inner_text().strip()
+                session.log(f"Clicking '{btn_text}' button...")
                 try:
-                    easy_apply_btn.click()
-                    time.sleep(2)
+                    apply_btn.click()
+                    time.sleep(4)
                 except Exception as ce:
-                    session.log(f"Click note: {ce}")
-            else:
-                session.log("Direct application form detected on page.")
+                    session.log(f"Click notice: {ce}")
+            
+            # Switch to newest page if popup opened
+            if len(context.pages) > 1:
+                active_page = context.pages[-1]
+                active_page.bring_to_front()
+                session.log(f"Switched to application portal tab: {active_page.url[:60]}")
 
-            # Multi-step Form Processing
-            max_steps = 8
+            session.status = "FILLING_FORM"
+            session.log("Scanning page structure for interactive application fields...")
+
+            # Multi-step Form Processing Loop
+            max_steps = 10
+            form_fields_found_total = 0
+
             for step in range(1, max_steps + 1):
                 session.log(f"Processing application Step {step}...")
+                active_page.bring_to_front()
 
                 # A. Handle Text, Email, Phone, Number Inputs
-                inputs = page.locator("input[type='text'], input[type='tel'], input[type='email'], input[type='number'], textarea")
+                inputs = active_page.locator("input[type='text'], input[type='tel'], input[type='email'], input[type='number'], textarea")
                 input_count = inputs.count()
+
+                if input_count > 0:
+                    form_fields_found_total += input_count
 
                 for i in range(input_count):
                     inp = inputs.nth(i)
                     if not inp.is_visible():
                         continue
 
-                    label_text = _get_input_label(page, inp)
+                    label_text = _get_input_label(active_page, inp)
                     current_val = inp.input_value()
 
                     if not current_val:
@@ -162,7 +192,6 @@ def _run_sync_playwright_apply(
                             session.log(f"❓ Prompting recruiter question: '{label_text}'")
                             session.answer_event.clear()
 
-                            # Wait up to 3 minutes for user input
                             answered = session.answer_event.wait(timeout=180)
                             if answered and session.user_answer:
                                 try:
@@ -171,8 +200,8 @@ def _run_sync_playwright_apply(
                                     pass
                             session.status = "FILLING_FORM"
 
-                # B. Handle Radio Buttons & Fieldsets (e.g. Yes/No questions)
-                fieldsets = page.locator("fieldset")
+                # B. Handle Radio Buttons & Fieldsets (Yes/No questions)
+                fieldsets = active_page.locator("fieldset")
                 fs_count = fieldsets.count()
                 for f_idx in range(fs_count):
                     fs = fieldsets.nth(f_idx)
@@ -209,7 +238,7 @@ def _run_sync_playwright_apply(
                             session.status = "FILLING_FORM"
 
                 # C. Handle File Upload / Resume
-                file_input = page.locator("input[type='file']").first
+                file_input = active_page.locator("input[type='file']").first
                 if file_input.count() > 0 and resume_path and os.path.exists(resume_path):
                     try:
                         session.log("Attaching resume PDF...")
@@ -221,8 +250,8 @@ def _run_sync_playwright_apply(
                 time.sleep(1)
 
                 # D. Check for Next / Review / Submit Button
-                next_btn = page.locator("button:has-text('Next'), button:has-text('Continue'), button:has-text('Review')").first
-                submit_btn = page.locator("button:has-text('Submit application'), button:has-text('Submit'), button:has-text('Apply now')").first
+                next_btn = active_page.locator("button:has-text('Next'), button:has-text('Continue'), button:has-text('Review')").first
+                submit_btn = active_page.locator("button:has-text('Submit application'), button:has-text('Submit'), button:has-text('Apply now')").first
 
                 if submit_btn.count() > 0 and submit_btn.is_visible():
                     session.status = "REVIEW_READY"
@@ -237,12 +266,17 @@ def _run_sync_playwright_apply(
                     except Exception:
                         break
                 else:
-                    session.status = "REVIEW_READY"
-                    session.log("All visible fields populated. Ready for review.")
+                    if form_fields_found_total > 0:
+                        session.status = "REVIEW_READY"
+                        session.log("All visible fields populated. Ready for review.")
+                    else:
+                        session.status = "REVIEW_READY"
+                        session.log("Application portal is open in your Chromium window.")
+                        session.log("You can review and complete any company-specific login or verification in the browser window!")
                     break
 
             # Keep browser alive for user to inspect/submit
-            for _ in range(30):
+            for _ in range(60):
                 if not session.is_active:
                     break
                 time.sleep(5)
