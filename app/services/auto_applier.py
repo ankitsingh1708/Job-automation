@@ -10,6 +10,10 @@ from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
 
 from app.services.profile_store import load_profile, record_question_answer, lookup_known_answer
 
+# Persistent Chrome Profile directory so LinkedIn login session stays preserved
+CHROME_PROFILE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "services", ".chrome_profile")
+os.makedirs(CHROME_PROFILE_DIR, exist_ok=True)
+
 class AutoApplySession:
     def __init__(self, session_id: str, job_id: str, job_title: str, company_name: str, apply_url: str):
         self.session_id = session_id
@@ -92,40 +96,43 @@ def _run_sync_playwright_apply(
 
     try:
         with sync_playwright() as p:
-            browser = None
+            session.log("Opening dedicated Chrome window with persistent login session...")
+            
+            context = None
             try:
-                session.log("Launching your Google Chrome browser window...")
-                browser = p.chromium.launch(
+                # Launch persistent Chrome browser window
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=CHROME_PROFILE_DIR,
                     channel="chrome",
                     headless=headless,
-                    args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+                    no_viewport=True,
+                    args=[
+                        "--start-maximized",
+                        "--disable-blink-features=AutomationControlled",
+                        "--window-size=1280,850",
+                        "--window-position=50,50"
+                    ]
                 )
             except Exception:
-                try:
-                    session.log("Launching Edge browser window...")
-                    browser = p.chromium.launch(
-                        channel="msedge",
-                        headless=headless,
-                        args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
-                    )
-                except Exception:
-                    session.log("Launching Chromium browser window...")
-                    browser = p.chromium.launch(
-                        headless=headless,
-                        args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
-                    )
+                # Fallback to Chromium persistent context
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=CHROME_PROFILE_DIR,
+                    headless=headless,
+                    no_viewport=True,
+                    args=[
+                        "--start-maximized",
+                        "--disable-blink-features=AutomationControlled",
+                        "--window-size=1280,850",
+                        "--window-position=50,50"
+                    ]
+                )
 
-            context = browser.new_context(
-                no_viewport=True,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-            
-            active_page = context.new_page()
+            active_page = context.pages[0] if context.pages else context.new_page()
 
-            # Listen for new tabs / popups (e.g. redirected to company career portal)
+            # Handle new tabs/popups
             def handle_new_page(new_p: Page):
                 nonlocal active_page
-                session.log(f"Detected application popup/tab: {new_p.url[:60]}...")
+                session.log(f"Switched to application tab: {new_p.url[:60]}...")
                 active_page = new_p
                 try:
                     active_page.bring_to_front()
@@ -135,10 +142,15 @@ def _run_sync_playwright_apply(
             context.on("page", handle_new_page)
 
             session.status = "OPENING_PORTAL"
-            session.log(f"Opening Job URL: {session.apply_url}")
+            session.log(f"Navigating to job URL: {session.apply_url}")
             active_page.goto(session.apply_url, wait_until="domcontentloaded", timeout=45000)
             active_page.bring_to_front()
             time.sleep(3)
+
+            # Check if user needs to log into LinkedIn once
+            sign_in_prompt = active_page.locator("a:has-text('Sign in'), button:has-text('Sign in')").first
+            if sign_in_prompt.count() > 0 and sign_in_prompt.is_visible():
+                session.log("💡 Tip: If prompted to Sign In to LinkedIn in the Chrome window, log in once — your session will be saved permanently!")
 
             # 1. Look for and click Easy Apply or Apply on Company Website button
             session.log("Checking for Apply action buttons...")
@@ -149,7 +161,7 @@ def _run_sync_playwright_apply(
                 session.log(f"Clicking '{btn_text}' button...")
                 try:
                     apply_btn.click()
-                    time.sleep(4)
+                    time.sleep(3)
                 except Exception as ce:
                     session.log(f"Click notice: {ce}")
             
@@ -269,7 +281,7 @@ def _run_sync_playwright_apply(
                 if submit_btn.count() > 0 and submit_btn.is_visible():
                     session.status = "REVIEW_READY"
                     session.log("🎉 Application details populated and ready for review!")
-                    session.log("You can review entries in the browser window and click Submit.")
+                    session.log("You can review entries in the Chrome window and click Submit.")
                     break
                 elif next_btn.count() > 0 and next_btn.is_visible():
                     session.log("Clicking 'Next' step...")
@@ -284,17 +296,17 @@ def _run_sync_playwright_apply(
                         session.log("All visible fields populated. Ready for review.")
                     else:
                         session.status = "REVIEW_READY"
-                        session.log("Application portal is open in your Chromium window.")
-                        session.log("You can review and complete any company-specific login or verification in the browser window!")
+                        session.log("Application portal is open in your Chrome window.")
+                        session.log("You can review and complete any company-specific verification directly in the Chrome window!")
                     break
 
-            # Keep browser alive for user to inspect/submit
+            # Keep Chrome open for up to 5 minutes
             for _ in range(60):
                 if not session.is_active:
                     break
                 time.sleep(5)
 
-            browser.close()
+            context.close()
 
     except Exception as e:
         session.status = "ERROR"

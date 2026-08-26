@@ -761,6 +761,11 @@ function triggerAutoApply(job) {
   var directLink = document.getElementById('autoApplyDirectLink');
   if (directLink) directLink.href = applyUrl;
 
+  // Open the application page directly in a new tab in your active browser
+  try {
+    window.open(applyUrl, '_blank');
+  } catch(e) {}
+
   fetch('/api/apply/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
