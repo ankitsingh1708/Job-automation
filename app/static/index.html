@@ -186,6 +186,11 @@
         <span>📢 Recruiter Hiring Posts (Hidden Market)</span>
         <span class="px-2 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-indigo-500 to-brand-500 text-white animate-pulse">NEW</span>
       </button>
+      <button id="viewRecruitersTabBtn" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:text-amber-500 flex items-center space-x-2 transition">
+        <i data-lucide="user-check" class="w-4 h-4 text-amber-500"></i>
+        <span>🎯 HR Email Directory (From Bio)</span>
+        <span class="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">HOT</span>
+      </button>
     </div>
   </div>
 
@@ -266,12 +271,12 @@
 
         <!-- Job Type Filter -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Employment Type</label>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Job Type</label>
           <select id="filterJobType" class="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500">
-            <option value="">Any Type</option>
+            <option value="">All Employment Types</option>
             <option value="full-time">Full-time</option>
-            <option value="contract">Contract</option>
             <option value="part-time">Part-time</option>
+            <option value="contract">Contract / C2C</option>
             <option value="internship">Internship</option>
           </select>
         </div>
@@ -282,7 +287,7 @@
           <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
             <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
               <input type="radio" name="filterDate" value="" checked class="text-brand-500 focus:ring-brand-500" />
-              <span>Any Time</span>
+              <span>Anytime</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer hover:text-slate-900 dark:hover:text-white">
               <input type="radio" name="filterDate" value="r86400" class="text-brand-500 focus:ring-brand-500" />
@@ -396,6 +401,36 @@
     <!-- Posts Grid Container -->
     <div id="postsCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <!-- Dynamic Post Cards will render here -->
+    </div>
+  </section>
+
+  <!-- 3. HR & Recruiter Email Directory Section (From About/Bio) -->
+  <section id="recruitersViewSection" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
+    <div class="mb-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-indigo-500/10 p-5 rounded-2xl border border-amber-300/80 dark:border-amber-700/60 shadow-sm">
+      <div>
+        <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="user-search" class="w-5 h-5 text-amber-500"></i>
+          <span>Technical Recruiters &amp; HRs with Verified Emails</span>
+        </h3>
+        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Directly extracted from LinkedIn profile About &amp; Bio sections &middot; Skip the queue and pitch directly</p>
+      </div>
+      <!-- Quick Company Filter for HRs -->
+      <div class="flex items-center flex-wrap gap-1.5 text-xs">
+        <span class="font-bold text-slate-500 dark:text-slate-400 text-[11px]">Filter:</span>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-amber-500 text-white shadow-xs" data-hr-company="">All</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Google">Google</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="CRED">CRED</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Zepto">Zepto</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Swiggy">Swiggy</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Microsoft">Microsoft</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Razorpay">Razorpay</button>
+        <button class="hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500" data-hr-company="Rippling">Rippling</button>
+      </div>
+    </div>
+
+    <!-- HR Cards Grid -->
+    <div id="recruitersCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- Dynamic HR Cards Render Here -->
     </div>
   </section>
 
@@ -808,6 +843,6 @@
     </div>
   </footer>
 
-  <script src="/static/app.js?v=110"></script>
+  <script src="/static/app.js?v=120"></script>
 </body>
 </html>

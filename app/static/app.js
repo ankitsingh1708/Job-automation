@@ -16,8 +16,10 @@ var state = {
   limit: 35,
   jobs: [],
   posts: [],
+  recruiters: [],
   selectedJob: null,
   currentView: 'jobs',
+  hrCompanyFilter: '',
   bookmarks: JSON.parse(localStorage.getItem('saved_jobs') || '[]'),
   resumeProfile: JSON.parse(localStorage.getItem('resume_profile') || 'null'),
   isLoading: false,
@@ -46,7 +48,7 @@ var openAutoApplySettingsBtn, autoApplySettingsModal, closeAutoApplySettingsBtn,
 var profFullName, profEmail, profPhone, profCity, profNotice, profCurrentCtc, profExpectedCtc, profLinkedin, profGithub, profAuth;
 
 // Recruiter Posts & Cold Email Elements
-var viewJobsTabBtn, viewPostsTabBtn, jobsMainSection, postsViewSection, postsCardsContainer, postsCountBadge;
+var viewJobsTabBtn, viewPostsTabBtn, viewRecruitersTabBtn, jobsMainSection, postsViewSection, recruitersViewSection, postsCardsContainer, postsCountBadge, recruitersCardsContainer;
 var coldEmailModal, closeColdEmailBtn, doneColdEmailBtn, copyColdEmailBtn, copyRecipientEmailBtn, coldEmailRecipient, coldEmailSubject, coldEmailBody, coldEmailTitle, coldEmailSubtitle;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -416,10 +418,13 @@ function setupEventListeners() {
   // View Switcher Tabs
   viewJobsTabBtn = document.getElementById('viewJobsTabBtn');
   viewPostsTabBtn = document.getElementById('viewPostsTabBtn');
+  viewRecruitersTabBtn = document.getElementById('viewRecruitersTabBtn');
   jobsMainSection = document.getElementById('jobsMainSection');
   postsViewSection = document.getElementById('postsViewSection');
+  recruitersViewSection = document.getElementById('recruitersViewSection');
   postsCardsContainer = document.getElementById('postsCardsContainer');
   postsCountBadge = document.getElementById('postsCountBadge');
+  recruitersCardsContainer = document.getElementById('recruitersCardsContainer');
 
   if (viewJobsTabBtn) {
     viewJobsTabBtn.addEventListener('click', function() {
@@ -432,6 +437,23 @@ function setupEventListeners() {
       switchView('posts');
     });
   }
+
+  if (viewRecruitersTabBtn) {
+    viewRecruitersTabBtn.addEventListener('click', function() {
+      switchView('recruiters');
+    });
+  }
+
+  document.querySelectorAll('.hr-filter-pill').forEach(function(pill) {
+    pill.addEventListener('click', function(e) {
+      document.querySelectorAll('.hr-filter-pill').forEach(function(p) {
+        p.className = 'hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-500';
+      });
+      pill.className = 'hr-filter-pill px-2.5 py-1 rounded-lg font-bold bg-amber-500 text-white shadow-xs';
+      state.hrCompanyFilter = pill.getAttribute('data-hr-company') || '';
+      fetchRecruiters();
+    });
+  });
 
   // Cold Email Modal Listeners
   coldEmailModal = document.getElementById('coldEmailModal');
@@ -1116,25 +1138,26 @@ function showToast(message) {
 
 function switchView(viewName) {
   state.currentView = viewName;
-  if (viewName === 'posts') {
-    if (jobsMainSection) jobsMainSection.classList.add('hidden');
+  if (jobsMainSection) jobsMainSection.classList.add('hidden');
+  if (postsViewSection) postsViewSection.classList.add('hidden');
+  if (recruitersViewSection) recruitersViewSection.classList.add('hidden');
+
+  var defBtnClass = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 flex items-center space-x-2 transition';
+  if (viewJobsTabBtn) viewJobsTabBtn.className = defBtnClass;
+  if (viewPostsTabBtn) viewPostsTabBtn.className = defBtnClass;
+  if (viewRecruitersTabBtn) viewRecruitersTabBtn.className = defBtnClass;
+
+  if (viewName === 'recruiters') {
+    if (recruitersViewSection) recruitersViewSection.classList.remove('hidden');
+    if (viewRecruitersTabBtn) viewRecruitersTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-amber-500 text-white shadow-md shadow-amber-500/20 flex items-center space-x-2 transition';
+    fetchRecruiters();
+  } else if (viewName === 'posts') {
     if (postsViewSection) postsViewSection.classList.remove('hidden');
-    if (viewPostsTabBtn) {
-      viewPostsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-md shadow-indigo-600/20 flex items-center space-x-2 transition';
-    }
-    if (viewJobsTabBtn) {
-      viewJobsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-500 flex items-center space-x-2 transition';
-    }
+    if (viewPostsTabBtn) viewPostsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 text-white shadow-md shadow-indigo-600/20 flex items-center space-x-2 transition';
     fetchPosts();
   } else {
-    if (postsViewSection) postsViewSection.classList.add('hidden');
     if (jobsMainSection) jobsMainSection.classList.remove('hidden');
-    if (viewJobsTabBtn) {
-      viewJobsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-brand-500 text-white shadow-md shadow-brand-500/20 flex items-center space-x-2 transition';
-    }
-    if (viewPostsTabBtn) {
-      viewPostsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-500 flex items-center space-x-2 transition';
-    }
+    if (viewJobsTabBtn) viewJobsTabBtn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-brand-500 text-white shadow-md shadow-brand-500/20 flex items-center space-x-2 transition';
     fetchJobs();
   }
   safeCreateIcons();
@@ -1281,4 +1304,144 @@ function openColdEmailForPostIndex(postIdx) {
     if (coldEmailBody) coldEmailBody.value = 'Failed to generate cold email.';
   });
 }
+
+function fetchRecruiters() {
+  if (recruitersCardsContainer) {
+    recruitersCardsContainer.innerHTML = '<div class="col-span-full py-16 text-center text-slate-400 space-y-3"><div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div><p class="text-xs font-semibold">Indexing Tech HR &amp; Recruiter About bios with verified emails...</p></div>';
+  }
+
+  var p = new URLSearchParams({
+    company: state.hrCompanyFilter || '',
+    role: state.keywords || '',
+    location: state.location || 'India',
+    top_tier_only: state.top_tier_only
+  });
+
+  fetch('/api/recruiters/search?' + p.toString())
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      state.recruiters = data.recruiters || [];
+      renderRecruitersList();
+    })
+    .catch(function(err) {
+      console.error('Recruiters fetch error', err);
+      if (recruitersCardsContainer) {
+        recruitersCardsContainer.innerHTML = '<div class="col-span-full py-12 text-center text-rose-500 text-xs">Failed to load recruiter profiles.</div>';
+      }
+    });
+}
+
+function renderRecruitersList() {
+  if (!recruitersCardsContainer) return;
+  if (!state.recruiters.length) {
+    recruitersCardsContainer.innerHTML = '<div class="col-span-full py-16 text-center text-slate-500"><p class="font-bold text-sm">No recruiter profiles found for this filter.</p><p class="text-xs text-slate-400 mt-1">Try switching to "All" or searching a different company.</p></div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < state.recruiters.length; i++) {
+    var r = state.recruiters[i];
+    var hrName = escapeHtml(r.name);
+    var hrTitle = escapeHtml(r.title);
+    var hrCompany = escapeHtml(r.company);
+    var hrLoc = escapeHtml(r.location);
+    var hrAvatar = r.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(hrName));
+    var primaryEmail = (r.extracted_emails && r.extracted_emails.length) ? r.extracted_emails[0] : '';
+    var aboutSnippet = escapeHtml(r.about_snippet || '');
+    var tierBadge = r.is_top_tier ? '<span class="px-2 py-0.5 rounded-md font-black bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">⭐ Top Tech HR</span>' : '';
+
+    var rolesBadges = '';
+    if (r.hiring_roles && r.hiring_roles.length) {
+      rolesBadges = '<div class="flex flex-wrap gap-1 mt-2.5">' + r.hiring_roles.map(function(role) {
+        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">🎯 ' + escapeHtml(role) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    html += '<div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:border-amber-400 dark:hover:border-amber-600 transition space-y-4">'
+      + '<div>'
+      + '<div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">'
+      + '<div class="flex items-center space-x-3">'
+      + '<img src="' + escapeHtml(hrAvatar) + '" class="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0" alt="' + hrName + '" />'
+      + '<div class="min-w-0">'
+      + '<h4 class="font-bold text-sm text-slate-900 dark:text-white truncate">' + hrName + '</h4>'
+      + '<p class="text-xs text-slate-600 dark:text-slate-400 font-medium truncate mt-0.5">' + hrTitle + '</p>'
+      + '<p class="text-[11px] text-slate-400 truncate">' + hrLoc + '</p>'
+      + '</div>'
+      + '</div>'
+      + tierBadge
+      + '</div>'
+      + '<div class="mt-3 p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-2">'
+      + '<div class="min-w-0 flex items-center space-x-2">'
+      + '<i data-lucide="mail-check" class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0"></i>'
+      + '<span class="text-xs font-mono font-bold text-amber-950 dark:text-amber-200 truncate" title="' + escapeHtml(primaryEmail) + '">' + escapeHtml(primaryEmail) + '</span>'
+      + '</div>'
+      + '<button onclick="copyDirectEmail(\'' + escapeHtml(primaryEmail) + '\')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 transition shrink-0 flex items-center gap-1"><i data-lucide="copy" class="w-3 h-3"></i> <span>Copy</span></button>'
+      + '</div>'
+      + '<div class="mt-3">'
+      + '<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">LinkedIn Bio / About Section Quote:</span>'
+      + '<div class="text-xs text-slate-700 dark:text-slate-300 italic leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 line-clamp-4 font-serif">'
+      + '"' + aboutSnippet + '"'
+      + '</div>'
+      + '</div>'
+      + rolesBadges
+      + '</div>'
+      + '<div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">'
+      + '<button onclick="openColdEmailForRecruiterIndex(' + i + ')" class="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-indigo-500 hover:from-amber-600 hover:to-indigo-600 text-white shadow-sm flex items-center justify-center space-x-1.5 transition">'
+      + '<i data-lucide="sparkles" class="w-3.5 h-3.5"></i>'
+      + '<span>AI Cold Email</span>'
+      + '</button>'
+      + '<a href="' + escapeHtml(r.profile_url) + '" target="_blank" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center space-x-1 transition">'
+      + '<span>View Profile</span>'
+      + '<i data-lucide="external-link" class="w-3.5 h-3.5 ml-1"></i>'
+      + '</a>'
+      + '</div>'
+      + '</div>';
+  }
+
+  recruitersCardsContainer.innerHTML = html;
+  safeCreateIcons();
+}
+
+function openColdEmailForRecruiterIndex(recruiterIdx) {
+  var r = state.recruiters[recruiterIdx];
+  if (!r) return;
+
+  var hrEmail = (r.extracted_emails && r.extracted_emails.length) ? r.extracted_emails[0] : 'recruiter@company.com';
+  if (coldEmailRecipient) coldEmailRecipient.value = hrEmail;
+  if (coldEmailTitle) coldEmailTitle.innerText = 'Cold Outreach: ' + r.name + ' (' + r.company + ')';
+  if (coldEmailSubtitle) coldEmailSubtitle.innerText = 'To ' + r.title;
+
+  if (coldEmailSubject) coldEmailSubject.value = 'Generating email...';
+  if (coldEmailBody) coldEmailBody.value = 'Drafting personalized outreach email to ' + r.name + '...';
+
+  if (coldEmailModal) {
+    coldEmailModal.classList.remove('hidden');
+    coldEmailModal.classList.add('flex');
+    safeCreateIcons();
+  }
+
+  fetch('/api/posts/cold-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      post: {
+        author_name: r.name,
+        author_company: r.company,
+        extracted_emails: [hrEmail],
+        skills: r.hiring_roles || ['Software Engineer']
+      },
+      resume_profile: state.resumeProfile
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (coldEmailSubject) coldEmailSubject.value = data.subject || ('Application: Software Engineer at ' + r.company);
+    if (coldEmailBody) coldEmailBody.value = data.body || '';
+  })
+  .catch(function(err) {
+    console.error('Cold email error', err);
+    if (coldEmailBody) coldEmailBody.value = 'Failed to generate cold email.';
+  });
+}
+
 

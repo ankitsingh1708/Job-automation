@@ -24,6 +24,7 @@ from app.services.auto_applier import (
 )
 from app.services.posts_scraper import search_linkedin_hiring_posts
 from app.services.cold_email_generator import generate_cold_outreach_email
+from app.services.hr_finder import search_recruiters_with_emails
 
 app = FastAPI(
     title="LinkedIn Job Openings Portal & AI Resume Matcher",
@@ -272,4 +273,19 @@ async def generate_cold_email_endpoint(payload: Dict[str, Any] = Body(...)):
     post = payload.get("post", {})
     resume_profile = payload.get("resume_profile")
     return generate_cold_outreach_email(post=post, resume_profile=resume_profile)
+
+@app.get("/api/recruiters/search")
+async def search_recruiters_endpoint(
+    company: str = Query(default=""),
+    role: str = Query(default=""),
+    location: str = Query(default="India"),
+    top_tier_only: bool = Query(default=False)
+):
+    return await search_recruiters_with_emails(
+        company=company,
+        role=role,
+        location=location,
+        top_tier_only=top_tier_only
+    )
+
 
