@@ -16,6 +16,8 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Temporary
+# Temporary & Chrome runtime data
 build_static.py
 *.log
+app/services/.chrome_profile/
+.chrome_profile/
